@@ -19,6 +19,7 @@ import thut.core.common.network.PacketAssembly;
 
 public class PacketTransform extends NBTPacket
 {
+	// Entity ID
     public int id;
 
     public static final PacketAssembly<PacketTransform> ASSEMBLY = PacketAssembly.registerAssembler(
@@ -34,7 +35,7 @@ public class PacketTransform extends NBTPacket
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(toSend).getData(PokeInfo.class);
         final PacketTransform message = new PacketTransform();
         info.writeToNBT(message.getTag());
-        message.getTag().putInt("__entityid__", toSend.getEntityId());
+        message.getTag().putInt("__entityid__", toSend.getEntity().getId());
         return message;
     }
     
@@ -63,7 +64,7 @@ public class PacketTransform extends NBTPacket
         if (this.getTag().contains("U"))
         {
             final PlayerEntity player = PokecubeCore.proxy.getPlayer();
-            if (this.getTag().contains("M"))
+            if (this.getTag().contains("H"))
             {
                 final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
                 final IPokemob pokemob = info.getPokemob(world);
@@ -95,7 +96,7 @@ public class PacketTransform extends NBTPacket
             {
                 info.set(pokemob, player);
                 // Callback to let server know to update us.
-                pokemob.getEntity().setEntityId(player.getEntityId());
+                pokemob.getEntity().setId(player.getEntity().getId());
                 PacketCommand.sendCommand(pokemob, Command.STANCE, new Stance(true, (byte) -3));
             }
             else info.resetPlayer(player);

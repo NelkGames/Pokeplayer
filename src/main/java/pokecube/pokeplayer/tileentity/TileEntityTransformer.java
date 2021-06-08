@@ -3,9 +3,7 @@ package pokecube.pokeplayer.tileentity;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-
 import com.google.common.collect.Lists;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -60,16 +58,17 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
         this(TileEntityInit.TRANSFORM_TILE.get());
     }
 
+    
     @Override
-    public void read(final BlockState state, final CompoundNBT nbt)
+    public void load(final BlockState state, final CompoundNBT nbt)
     {
-        super.read(state, nbt);
+        super.load(state, nbt);
         if (nbt.contains("stack"))
         {
             final CompoundNBT tag = nbt.getCompound("stack");
             this.items.get(0).setTag(tag);
         }
-        this.items = NonNullList.withSize(this.getSizeInventory(), ItemStack.EMPTY);
+        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         if (nbt.contains("nums")) this.nums = nbt.getIntArray("nums");
         if (nbt.contains("lvl")) this.lvl = nbt.getInt("lvl");
         this.stepTick = nbt.getInt("stepTick");
@@ -77,16 +76,16 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
         this.pubby = nbt.getBoolean("public");
         ItemStackHelper.loadAllItems(nbt, this.items);
     }
-
+ 
     @Override
-    public CompoundNBT write(final CompoundNBT compound)
+    public CompoundNBT save(final CompoundNBT compound)
     {
-        super.write(compound);
+        super.save(compound);
         ItemStackHelper.saveAllItems(compound, this.items);
         if (this.items.get(0).isEmpty())
         {
             final CompoundNBT tag = new CompoundNBT();
-            this.items.get(0).write(tag);
+            this.items.get(0).save(tag);
             compound.put("stack", tag);
         }
         if (this.nums != null) compound.putIntArray("nums", this.nums);
@@ -110,10 +109,9 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
     }
 
     @Override
-    public void markDirty()
-    {
-        super.markDirty();
-        this.world.notifyBlockUpdate(this.pos, this.getBlockState(), this.getBlockState(),
+    public void clearRemoved() {
+    	super.clearRemoved();
+    	this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(),
                 net.minecraftforge.common.util.Constants.BlockFlags.BLOCK_UPDATE);
     }
 
@@ -130,10 +128,9 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
     }
 
     @Override
-    public int getSizeInventory()
-    {
-        return this.items.size();
-    }
+   	public int getContainerSize() {
+   		return this.items.size();
+   	}
 
     @Override
     public boolean isEmpty()
@@ -144,82 +141,79 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
     }
 
     @Override
-    public ItemStack getStackInSlot(final int index)
-    {
-        return this.items.get(index);
+    public ItemStack getItem(final int index) {
+    	return this.items.get(index);
     }
 
     @Override
-    public ItemStack decrStackSize(final int index, final int count)
-    {
-        return ItemStackHelper.getAndSplit(this.items, index, count);
+    public ItemStack removeItem(int index, int count) {
+    	return ItemStackHelper.removeItem(this.items, index, count);
     }
-
+    
     @Override
-    public ItemStack removeStackFromSlot(final int index)
-    {
-        return ItemStackHelper.getAndRemove(this.items, index);
+    public ItemStack removeItemNoUpdate(int index) {
+    	return ItemStackHelper.takeItem(this.items, index);
     }
-
+    
+    
     @Override
-    public void setInventorySlotContents(final int index, final ItemStack stack)
+    public void setItem(final int index, final ItemStack stack)
     {
         final ItemStack itemStack = this.items.get(index);
-        final boolean flag = !stack.isEmpty() && stack.isItemEqual(itemStack) && ItemStack.areItemStackTagsEqual(stack,
+        final boolean flag = !stack.isEmpty() && stack.areShareTagsEqual(itemStack) && ItemStack.matches(stack,
                 itemStack);
         this.items.set(index, stack);
-        if (stack.getCount() > this.getInventoryStackLimit()) stack.setCount(this.getInventoryStackLimit());
+        if (stack.getCount() > this.getContainerSize()) stack.setCount(this.getContainerSize());
 
-        if (!flag) this.markDirty();
+        if (!flag) this.setChanged();
     }
-
+    
     @Override
-    public boolean isUsableByPlayer(final PlayerEntity player)
+    public boolean canOpen(final PlayerEntity player)
     {
-        if (this.world.getTileEntity(this.pos) != this) return false;
-        else return player.getDistanceSq(this.pos.getX() + 0.5D, this.getPos().getY() + 0.5D, this.pos.getZ()
+        if (this.level.getBlockEntity(this.getBlockPos()) != this) return false;
+        else return player.distanceToSqr(this.getBlockPos().getX() + 0.5D, this.getBlockPos().getY() + 0.5D, this.getBlockPos().getZ()
                 + 0.5D) <= 64.0D;
     }
-
+    
     @Override
-    public boolean isItemValidForSlot(final int index, final ItemStack stack)
+    public boolean canPlaceItem(final int index, final ItemStack stack)
     {
         return !stack.isDamaged();
     }
 
     @Override
-    public void clear()
-    {
-        super.clear();
-        this.items.clear();
+    public void setRemoved() {
+    	super.setRemoved();
+    	this.items.clear();
     }
 
     @Override
     public SUpdateTileEntityPacket getUpdatePacket()
     {
         final CompoundNBT nbt = new CompoundNBT();
-        this.write(nbt);
+        this.deserializeCaps(nbt);
 
-        return new SUpdateTileEntityPacket(this.getPos(), 1, nbt);
+        return new SUpdateTileEntityPacket(this.getBlockPos(), 1, nbt);
     }
 
     @Override
     public void onDataPacket(final NetworkManager net, final SUpdateTileEntityPacket pkt)
     {
-        final BlockState blockState = this.world.getBlockState(this.pos);
-        this.read(blockState, pkt.getNbtCompound());
+        final BlockState blockState = this.level.getBlockState(this.getBlockPos());
+        this.load(blockState, pkt.getTag());
     }
 
     @Override
     public CompoundNBT getUpdateTag()
     {
-        return this.write(new CompoundNBT());
+        return this.save(new CompoundNBT());
     }
 
     @Override
     public void handleUpdateTag(final BlockState state, final CompoundNBT tag)
     {
-        this.read(state, tag);
+        this.load(state, tag);
     }
 
     public ItemStack getStack(final ItemStack stack)
@@ -229,11 +223,11 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
 
     public void onWalkedOn(final Entity entityIn)
     {
-        if (this.getWorld().isRemote || this.stepTick-- > 0) return;
-        this.stepTick = 50;
+        if (this.getLevel().isClientSide || this.stepTick-- > 0) return;
+        this.stepTick = 20;
         final PlayerEntity player = (PlayerEntity) entityIn.getEntity();
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
-        final boolean isPokemob = info.getPokemob(this.world) != null;
+        final boolean isPokemob = info.getPokemob(this.level) != null;
 
         final boolean hasPokemob = this.random || !this.getItems().get(0).isEmpty();
 
@@ -242,7 +236,8 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
         	
             final IPokemob pokemob = this.getPokemob();
             final UUID playerTrainer = pokemob.getOwnerId();
-            if (pokemob != null &&  pokemob.getHealth() != 0 && playerTrainer != player.getUniqueID())
+            
+            if (pokemob != null &&  pokemob.getHealth() != 0 && playerTrainer != player.getUUID())
             {
                 PokeInfo.setPokemob(player, pokemob);
                 this.items.set(0, ItemStack.EMPTY);
@@ -255,8 +250,8 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
             PokecubeCore.LOGGER.debug("Converting {} to {}", player.getDisplayName().getString(), pokemob
                     .getPokedexEntry().getName());
             EventsHandler.sendUpdate(player);
-            final ServerWorld worldIn = (ServerWorld) player.getEntityWorld();
-            for (final PlayerEntity player2 : worldIn.getPlayers())
+            final ServerWorld worldIn = (ServerWorld) player.getEntity().level;
+            for (final PlayerEntity player2 : worldIn.players())
                 PacketTransform.sendPacket(player, (ServerPlayerEntity) player2);
             return;
         }
@@ -270,16 +265,16 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
             tag.remove("playerID");
             info.detach();
             final ItemStack pokemob = PokecubeManager.pokemobToItem(poke);
-            if (player.abilities.allowFlying && !player.isCreative())
+            if (player.abilities.flying && !player.isCreative())
             {
-                player.abilities.allowFlying = false;
-                player.sendPlayerAbilities();
+                player.abilities.flying = false;
+                player.onUpdateAbilities();
             }
             PokeInfo.setPokemob(player, null);
             this.items.set(0, pokemob);
             EventsHandler.sendUpdate(player);
-            final ServerWorld worldIn = (ServerWorld) player.getEntityWorld();
-            for (final PlayerEntity player2 : worldIn.getPlayers())
+            final ServerWorld worldIn = (ServerWorld) player.getEntity().level;
+            for (final PlayerEntity player2 : worldIn.players())
                 PacketTransform.sendPacket(player, (ServerPlayerEntity) player2);
             return;
         }
@@ -295,9 +290,9 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
             else
             {
                 final List<Integer> numbers = Lists.newArrayList(Database.data.keySet());
-                num = numbers.get(this.getWorld().rand.nextInt(numbers.size()));
+                num = numbers.get(this.getLevel().random.nextInt(numbers.size()));
             }
-            final Entity entity = PokecubeCore.createPokemob(Database.getEntry(num), this.getWorld());
+            final Entity entity = PokecubeCore.createPokemob(Database.getEntry(num), this.getLevel());
             final IPokemob pokemob = CapabilityPokemob.getPokemobFor(entity);
             if (entity != null)
             {
@@ -306,7 +301,7 @@ public class TileEntityTransformer extends LockableLootTileEntity implements ICl
             }
             return pokemob;
         }
-        final IPokemob pokemob = PokecubeManager.itemToPokemob(this.items.get(0), this.getWorld());
+        final IPokemob pokemob = PokecubeManager.itemToPokemob(this.items.get(0), this.getLevel());
         return pokemob;
     }
 }

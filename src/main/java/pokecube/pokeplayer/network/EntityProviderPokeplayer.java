@@ -18,7 +18,7 @@ public class EntityProviderPokeplayer extends EntityProvider
     @Override
     public Entity getEntity(final World world, final int id, final boolean expectsPokemob)
     {
-        final Entity ret = world.getEntityByID(id);
+        final Entity ret = world.getEntity(id);
         if (expectsPokemob && ret instanceof PlayerEntity)
         {
             final PlayerEntity player = Minecraft.getInstance().player;

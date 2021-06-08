@@ -33,7 +33,7 @@ public class ClientSetupHandler
     {	
 		PokecubeCore.packets.registerMessage(PacketTransform.class, PacketTransform::new);
 		
-		ScreenManager.registerFactory(ContainerInit.TRANSFORM_CONTAINER.get(), TransformBlockScreen::new);
+		ScreenManager.register(ContainerInit.TRANSFORM_CONTAINER.get(), TransformBlockScreen::new);
 		GuiDisplayPokecubeInfo.instance = new GuiAsPokemob();
 		
 		PokecubeCore.provider = new EntityProviderPokeplayer((EntityProvider) PokecubeCore.provider);

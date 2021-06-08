@@ -14,9 +14,9 @@ public class InventoryPlayerPokemob extends AnimalChest
     public InventoryPlayerPokemob(PokeInfo info, World world)
     {
         super();
-        for (int i = 0; i < info.getPokemob(world).getInventory().getSizeInventory(); i++)
+        for (int i = 0; i < info.getPokemob(world).getInventory().getContainerSize(); i++)
         {
-            this.setInventorySlotContents(i, info.getPokemob(world).getInventory().getStackInSlot(i));
+            this.canPlaceItem(i, info.getPokemob(world).getInventory().getItem(i));
         }
         this.info = info;
     }
@@ -24,9 +24,9 @@ public class InventoryPlayerPokemob extends AnimalChest
     public InventoryPlayerPokemob(AnimalChest inventory)
     {
         super();
-        for (int i = 0; i < inventory.getSizeInventory(); i++)
+        for (int i = 0; i < inventory.getContainerSize(); i++)
         {
-            this.setInventorySlotContents(i, inventory.getStackInSlot(i));
+            this.canPlaceItem(i, inventory.getItem(i));
         }
         this.info = null;
     }
@@ -34,9 +34,9 @@ public class InventoryPlayerPokemob extends AnimalChest
     public void saveToPokemob(IPokemob pokemob, PlayerEntity player)
     {
         IInventory inventory = pokemob.getInventory();
-        for (int i = 0; i < inventory.getSizeInventory(); i++)
+        for (int i = 0; i < inventory.getContainerSize(); i++)
         {
-            inventory.setInventorySlotContents(i, this.getStackInSlot(i));
+            inventory.canPlaceItem(i, this.getItem(i));
         }
         if (info != null)
         {
@@ -47,21 +47,21 @@ public class InventoryPlayerPokemob extends AnimalChest
     public void syncFromPokemob(IPokemob pokemob)
     {
         IInventory inventory = pokemob.getInventory();
-        for (int i = 0; i < inventory.getSizeInventory(); i++)
+        for (int i = 0; i < inventory.getContainerSize(); i++)
         {
-            this.setInventorySlotContents(i, inventory.getStackInSlot(i));
+            this.canPlaceItem(i, inventory.getItem(i));
         }
     }
-
+    
     @Override
-    public void openInventory(PlayerEntity player)
-    {
+    public void startOpen(PlayerEntity playerIn) {
+    	super.startOpen(playerIn);
     }
 
     @Override
-    public void closeInventory(PlayerEntity player)
+    public void stopOpen(PlayerEntity player)
     {
-        if (player.getEntityWorld().isRemote) return;
+        if (player.getEntityData().isEmpty()) return;
         IPokemob e = PokeInfo.getPokemob(player);
         saveToPokemob(e, player);
     }

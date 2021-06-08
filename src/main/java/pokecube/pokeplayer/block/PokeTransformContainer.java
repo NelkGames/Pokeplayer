@@ -22,7 +22,7 @@ public class PokeTransformContainer extends Container {
 	public PokeTransformContainer(final int windowID, final PlayerInventory playerInv, final TileEntityTransformer tileEntityIn) {
 		super(ContainerInit.TRANSFORM_CONTAINER.get(), windowID);
 		this.tileEntity = tileEntityIn;
-		this.canInteract = IWorldPosCallable.of(tileEntityIn.getWorld(), tileEntityIn.getPos());
+		this.canInteract = IWorldPosCallable.create(tileEntityIn.getLevel(), tileEntityIn.getBlockPos());
 		
 		this.addSlot(new Slot(tileEntityIn, 0, 81, 36));
 		
@@ -50,7 +50,7 @@ public class PokeTransformContainer extends Container {
 	private static TileEntityTransformer getTileEntity(final PlayerInventory playerIn, final PacketBuffer data) {
 		Objects.requireNonNull(playerIn, "");
 		Objects.requireNonNull(data, "");
-		final TileEntity tileAtPos = playerIn.player.world.getTileEntity(data.readBlockPos());
+		final TileEntity tileAtPos = playerIn.player.level.getBlockEntity(data.readBlockPos());
 		if(tileAtPos instanceof TileEntityTransformer) {
 			return (TileEntityTransformer) tileAtPos;
 		}
@@ -58,32 +58,32 @@ public class PokeTransformContainer extends Container {
 	}
 	
 	@Override
-	public boolean canInteractWith(PlayerEntity playerIn) {
-		return isWithinUsableDistance(canInteract, playerIn, BlockInit.TRANSFORM.get());
-	}
-	
-	@Override
-	public ItemStack transferStackInSlot(PlayerEntity playerIn, int index) {
+	public ItemStack quickMoveStack(PlayerEntity playerIn, int index) {
 		ItemStack itemStack = ItemStack.EMPTY;
-		Slot slot = this.inventorySlots.get(index);
-		if(slot != null && slot.getHasStack()) {
-			ItemStack itemStack1 = slot.getStack();
+		Slot slot = this.slots.get(index);
+		if(slot != null && slot.getItem().isStackable()) {
+			ItemStack itemStack1 = slot.getItem().getStack();
 			itemStack = itemStack1.copy();
 			if(index < 1) {
-				if (!this.mergeItemStack(itemStack1, 1, this.inventorySlots.size(), true)) {
+				if (!this.moveItemStackTo(itemStack1, 1, this.slots.size(), true)) {
 					return ItemStack.EMPTY;
 				}
-			}else if (!this.mergeItemStack(itemStack1, 0, 1, false)) {
+			}else if (!this.moveItemStackTo(itemStack1, 0, 1, false)) {
 				return ItemStack.EMPTY;
 			}
 			
 			if(itemStack1.isEmpty()) {
-				slot.putStack(ItemStack.EMPTY);
+				slot.set(ItemStack.EMPTY);
 			}else {
-				slot.onSlotChanged();
+				slot.setChanged();
 			}
 		}
 		
 		return itemStack;
+	}
+	
+	@Override
+	public boolean stillValid(PlayerEntity playerIn) {
+		return stillValid(canInteract, playerIn, BlockInit.TRANSFORM.get());
 	}
 }

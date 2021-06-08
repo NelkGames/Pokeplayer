@@ -54,7 +54,7 @@ public class Stance extends StanceHandler
         // Handle pokeplayer specific things.
         if (pokemob.getEntity().getPersistentData().getBoolean("is_a_player"))
         {
-            final Entity entity = pokemob.getEntity().getEntityWorld().getEntityByID(pokemob.getEntity().getEntityId());
+            final Entity entity = pokemob.getEntity().level.getEntity(pokemob.getEntity().getEntity().getId());
             if (entity instanceof PlayerEntity)
             {
                 final PlayerEntity player = (PlayerEntity) entity;
@@ -65,24 +65,24 @@ public class Stance extends StanceHandler
                             .getEntity(), new Vector3d(0, 0, 0));
 
                     // Apply interaction, also do not allow saddle.
-                    final ItemStack saddle = pokemob.getInventory().getStackInSlot(0);
-                    if (!saddle.isEmpty()) pokemob.getInventory().setInventorySlotContents(0, ItemStack.EMPTY);
+                    final ItemStack saddle = pokemob.getInventory().getItem(0);
+                    if (!saddle.isEmpty()) pokemob.getInventory().canPlaceItem(0, ItemStack.EMPTY);
                     PokecubeCore.MOVE_BUS.post(evt);
-                    if (!saddle.isEmpty()) pokemob.getInventory().setInventorySlotContents(0, saddle);
+                    if (!saddle.isEmpty()) pokemob.getInventory().canPlaceItem(0, saddle);
 
                     final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
                     info.save(player);
                 }
                 else if (this.key == Stance.SYNCUPDATE) {
-                	PacketDataSync.sync((ServerPlayerEntity) player, pokemob.dataSync(), player.getEntityId(), true);
+                	PacketDataSync.sync((ServerPlayerEntity) player, pokemob.dataSync(), player.getEntity().getId(), true);
                 }
                 else if (this.key == Stance.BUTTONTOGGLESIT)
                 {
                     final PacketTransform packet = new PacketTransform();
-                    packet.id = player.getEntityId();
+                    packet.getTag().putInt("__entityid__", player.getEntity().getId());
                     packet.getTag().putBoolean("U", true);
                     packet.getTag().putBoolean("S", pokemob.getLogicState(LogicStates.SITTING));
-                    PacketTransform.sendPacket(player, (ServerPlayerEntity) player);
+                    PacketTransform.ASSEMBLY.sendTo(packet, (ServerPlayerEntity) player);
                 }
             }
         }

@@ -12,7 +12,7 @@ public class TileEntityInit {
     
     static
     {
-    	TRANSFORM_TILE = Pokeplayer.TILES.register("pokeplayer_transform", () -> TileEntityType.Builder.create(
+    	TRANSFORM_TILE = Pokeplayer.TILES.register("pokeplayer_transform", () -> TileEntityType.Builder.of(
     			TileEntityTransformer::new, BlockInit.TRANSFORM.get()).build(null));
     }
     

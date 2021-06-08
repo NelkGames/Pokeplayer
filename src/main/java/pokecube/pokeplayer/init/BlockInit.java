@@ -18,13 +18,13 @@ public class BlockInit {
     static
     {
     	TRANSFORM = Pokeplayer.BLOCKS.register("pokeplayer_transform",
-    			() -> new TransformBlock(Sensitivity.MOBS, Block.Properties.create(Material.ROCK).hardnessAndResistance(100)));
+    			() -> new TransformBlock(Sensitivity.MOBS, Block.Properties.of(Material.STONE).harvestLevel(100)));
     }
     
     public static void init()
     {
         for (final RegistryObject<Block> reg : Pokeplayer.BLOCKS.getEntries())
             Pokeplayer.ITEMS.register(reg.getId().getPath(), () -> new BlockItem(reg.get(), new Item.Properties()
-                    .group(PokecubeItems.POKECUBEBLOCKS)));
+                    .tab(PokecubeItems.POKECUBEBLOCKS)));
     }
 }

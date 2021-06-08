@@ -19,7 +19,8 @@ public class RenderHandler
     {
         final PlayerEntity player = Minecraft.getInstance().player;
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
-        if (info.getPokemob(player.getEntityWorld()) != null) event.setCanceled(true);
+        if (info.getPokemob(player.getEntity().level) != null) 
+        	event.setCanceled(true);
     }
 
 	@SubscribeEvent
@@ -27,18 +28,18 @@ public class RenderHandler
     {
         final PlayerEntity player = (PlayerEntity) event.getEntity();
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
-        if (info.getPokemob(player.getEntityWorld()) == null) return;
-        final LivingEntity entity = info.getPokemob(player.getEntityWorld()).getEntity();
-        final boolean backup = event.getRenderer().getRenderManager().info.isValid();
+        if (info.getPokemob(player.getEntity().level) == null) return;
+        final LivingEntity entity = info.getPokemob(player.getEntity().level).getEntity();
+        final boolean backup = event.getRenderer().getDispatcher().renderers.isEmpty(); //.getDispatcher().getFont().isBidirectional();
         // EntityTools.copyEntityTransforms(entity, player);
-        event.getRenderer().getRenderManager().setRenderShadow(false);
-        event.getRenderer().getRenderManager().renderEntityStatic(
+        event.getRenderer().getDispatcher().setRenderShadow(true);
+        event.getRenderer().getDispatcher().render(
         		entity,
         		0,
         		0,
         		0,
         		0, event.getPartialRenderTick(), event.getMatrixStack(), event.getBuffers(), event.getLight());
-        event.getRenderer().getRenderManager().setRenderShadow(backup);
+        event.getRenderer().getDispatcher().setRenderShadow(backup);
         event.setCanceled(true);
     }
 }

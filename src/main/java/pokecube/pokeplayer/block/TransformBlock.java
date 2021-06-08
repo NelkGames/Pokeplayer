@@ -33,13 +33,13 @@ public class TransformBlock extends PressurePlateBlock
     {
         return true;
     }
-   
+		
     @Override
-    public ActionResultType onBlockActivated(BlockState state, World world, BlockPos pos, PlayerEntity player,
+    public ActionResultType use(BlockState state, World world, BlockPos pos, PlayerEntity player,
     		Hand hand, BlockRayTraceResult hit) 
     {
-    	if(!world.isRemote) {
-			final TileEntity tile = world.getTileEntity(pos);
+    	if(!world.isClientSide) {
+			final TileEntity tile = world.getBlockEntity(pos);
 		    if (tile instanceof TileEntityTransformer) {
 		    	NetworkHooks.openGui((ServerPlayerEntity) player, (TileEntityTransformer) tile, pos);
 		    	return ActionResultType.SUCCESS;
@@ -49,23 +49,24 @@ public class TransformBlock extends PressurePlateBlock
     }
     
     @Override
-    public void onEntityCollision(BlockState state, World worldIn, BlockPos pos, Entity entityIn) 
+    public void entityInside(BlockState state, World worldIn, BlockPos pos, Entity entityIn) 
     {
-    	super.onEntityCollision(state, worldIn, pos, entityIn);
-    	TileEntity tile = worldIn.getTileEntity(pos);
+    	super.entityInside(state, worldIn, pos, entityIn);
+    	TileEntity tile = worldIn.getBlockEntity(pos);
         if (tile instanceof TileEntityTransformer && entityIn instanceof PlayerEntity)
         {
             ((TileEntityTransformer) tile).onWalkedOn(entityIn);
         }
     }
-
+    
     @Override
-    public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
+    public void onRemove(BlockState state, World worldIn, BlockPos pos, BlockState newState,
+    		boolean isMoving) {
     	if (state.getBlock() != newState.getBlock()) {
-			TileEntity tileentity = worldIn.getTileEntity(pos);
+			TileEntity tileentity = worldIn.getBlockEntity(pos);
 			if (tileentity instanceof TileEntityTransformer) {
-				InventoryHelper.dropItems(worldIn, pos, ((TileEntityTransformer) tileentity).getItems());
-				worldIn.updateComparatorOutputLevel(pos, this);
+				InventoryHelper.dropContents(worldIn, pos, ((TileEntityTransformer) tileentity).getItems());
+				worldIn.blockUpdated(pos, this);
 			}
     	}
     }

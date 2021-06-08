@@ -9,8 +9,11 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.DamageSource;
 import net.minecraft.world.World;
 import pokecube.core.PokecubeCore;
+import pokecube.core.ai.tasks.combat.management.FindTargetsTask;
+import pokecube.core.interfaces.IMoveConstants;
 import pokecube.core.interfaces.IPokemob;
 import pokecube.core.interfaces.pokemob.ai.GeneralStates;
+import pokecube.core.interfaces.pokemob.ai.LogicStates;
 import pokecube.core.items.pokecubes.PokecubeManager;
 import pokecube.core.network.packets.PacketDataSync;
 import pokecube.core.utils.EntityTools;
@@ -40,6 +43,7 @@ public class PokeInfo extends PlayerData
     {
     }
 
+    // Called when it transforms into pokemon.//	
     public void set(final IPokemob pokemob, final PlayerEntity player)
     {
         if (this.pokemob != null || pokemob == null) this.resetPlayer(player);
@@ -47,37 +51,38 @@ public class PokeInfo extends PlayerData
         if (this.attached) return;
         this.stack = PokecubeManager.pokemobToItem(pokemob);
         this.pokemob = pokemob;
-        this.pokeInventory = new InventoryPlayerPokemob(this, player.getEntityWorld());
-        this.originalHeight = player.getHeight();
-        this.originalWidth = player.getWidth();
+        this.pokeInventory = new InventoryPlayerPokemob(this, player.getEntity().level);
+        this.originalHeight = player.getBbHeight();
+        this.originalWidth = player.getBbWidth();
         this.originalHP = player.getMaxHealth();
-        pokemob.getEntity().setWorld(player.getEntityWorld());
+        pokemob.getEntity().setLevel(player.getEntity().level);
         pokemob.getEntity().getPersistentData().putBoolean("is_a_player", true);
-        pokemob.getEntity().getPersistentData().putString("playerID", player.getUniqueID().toString());
+        pokemob.getEntity().getPersistentData().putString("playerID", player.getUUID().toString());
         pokemob.getEntity().getPersistentData().putString("oldName", pokemob.getPokemonNickname());
         pokemob.setPokemonNickname(player.getDisplayName().getString());
         pokemob.setOwner(player);
         pokemob.initAI();
-        player.recalculateSize();
+        player.getScale();
         final DataSync sync = SyncHandler.getData(player);
         if (sync instanceof DataSyncWrapper) ((DataSyncWrapper) sync).wrapped = this.pokemob.dataSync();
-        if (player instanceof ServerPlayerEntity) PacketDataSync.sendInitPacket(player, this.getIdentifier());
+        if (player instanceof ServerPlayerEntity) PacketDataSync.syncData(player, this.getIdentifier());
         this.save(player);
     }
 
+    //Reset Player//
     public void resetPlayer(final PlayerEntity player)
     {
         final DataSync sync = SyncHandler.getData(player);
         if (sync instanceof DataSyncWrapper) ((DataSyncWrapper) sync).wrapped = sync;
-        if (this.pokemob == null && !player.getEntityWorld().isRemote) return;
+        if (this.pokemob == null && !player.getEntity().level.isClientSide()) return;
         player.getEyeHeight();
-        player.recalculateSize();
+        player.getScale();
         this.setFlying(player, false);
         this.pokemob = null;
         this.stack = ItemStack.EMPTY;
         this.pokeInventory = null;
         this.save(player);
-        if (!player.getEntityWorld().isRemote) EventsHandler.sendUpdate(player);
+        if (!player.getEntity().level.isClientSide()) EventsHandler.sendUpdate(player);
     }
 
     public void setPlayer(final PlayerEntity player)
@@ -86,22 +91,22 @@ public class PokeInfo extends PlayerData
         final DataSync sync = SyncHandler.getData(player);
         if (sync instanceof DataSyncWrapper) ((DataSyncWrapper) sync).wrapped = this.pokemob.dataSync();
         this.pokemob.setSize((float) (this.pokemob.getSize() / PokecubeCore.getConfig().scalefactor));
-        player.stepHeight = this.pokemob.getEntity().getEyeHeight();
+        player.maxUpStep = this.pokemob.getEntity().maxUpStep;
         this.setFlying(player, true);
         this.save(player);
-        if (!player.getEntityWorld().isRemote)
+        if (!player.getEntity().level.isClientSide())
         {
             EventsHandler.sendUpdate(player);
-            ((ServerPlayerEntity) player).sendAllContents(player.container, player.container.inventoryItemStacks);
+            ((ServerPlayerEntity) player).refreshContainer(player.containerMenu, player.containerMenu.getItems());
             // // Fixes the inventories appearing to vanish
-            player.getPersistentData().putLong("_pokeplayer_evolved_", player.getEntityWorld().getGameTime() + 50);
+            player.getPersistentData().putLong("_pokeplayer_evolved_", player.getEntity().level.getGameTime() + 50);
         }
     }
 
     public void postPlayerTick(final PlayerEntity player)
     {
         if (this.pokemob == null) return;
-        player.stepHeight = this.pokemob.getEntity().stepHeight;
+        player.maxUpStep = this.pokemob.getEntity().maxUpStep;
     }
 
     public void onUpdate(final PlayerEntity player, final World world)
@@ -111,10 +116,20 @@ public class PokeInfo extends PlayerData
         final MobEntity poke = this.pokemob.getEntity();
 
         final float eye = poke.getEyeHeight(Pose.STANDING);
-        if (eye != player.getEyeHeight()) player.recalculateSize();
+        if (eye != player.getEyeHeight()) player.getScale();
 
+        // Fixes pokemob sometimes targetting self.
+        if (poke.getTarget() == player || poke.getTarget() == poke)
+        {
+            boolean old = FindTargetsTask.handleDamagedTargets;
+            FindTargetsTask.handleDamagedTargets = false;
+            poke.setTarget(null);
+            pokemob.setTargetID(-1);
+            FindTargetsTask.handleDamagedTargets = old;
+        }
+        
         // Flag the data sync dirty every so often to ensure things stay synced.
-        if (poke.ticksExisted % 20 == 0) for (final Data<?> d : this.pokemob.dataSync().getAll())
+        if (poke.tickCount % 20 == 0) for (final Data<?> d : this.pokemob.dataSync().getAll())
             d.setDirty(true);
 
         // Ensure it is tamed.
@@ -123,80 +138,58 @@ public class PokeInfo extends PlayerData
         this.pokemob.setGeneralState(GeneralStates.STAYING, false);
         // Update the mob.
         // Ensure the mob has correct world.
-        poke.setWorld(player.getEntityWorld());
-        poke.addedToChunk = true;
+        poke.setLevel(player.getEntity().level);
+        poke.inChunk = true;
         // No clip to prevent collision effects from the mob itself.
-        poke.noClip = true;
+        poke.horizontalCollision = true;
 
+//        poke.canUpdate();
+        
         // Update location
-        poke.distanceWalkedModified = Integer.MAX_VALUE;
+        poke.walkDist = Integer.MAX_VALUE;
         EntityTools.copyEntityTransforms(poke, player);
 
         // Deal with health
-        if (player.abilities.isCreativeMode)
+        if (player.isCreative())
         {
             poke.setHealth(poke.getMaxHealth());
             this.pokemob.setHungerTime(-PokecubeCore.getConfig().pokemobLifeSpan / 4);
         }
         
         float health = poke.getHealth();
+        
+        float playerHealth = player.getHealth();
+        
+        playerHealth = pokemob.getHealth();
+        poke.setHealth(playerHealth);
+        
         // do not manage hp for creative mode players.
-        if (!player.abilities.isCreativeMode) {
-        	if (player instanceof ServerPlayerEntity && player.addedToChunk)
+        if (!player.isCreative()) {
+        	if (player instanceof ServerPlayerEntity && player.inChunk)
 	        {
+        		// Set Player is Fly!
         		setFlying(player, true);
         		
-	            float playerHealth = player.getHealth();
-	            
-	            /** Player has healed somehow, this is fine. */
-	            if (playerHealth > health && this.lastDamage == null && health > 0 && playerHealth <= poke.getMaxHealth()) 
-	            {
-	                if (poke.getAttackTarget() == null) {
-	                	health = playerHealth;
-	                }else { 
-	                	playerHealth = health;
-	                }
-	            }
-	
-//	            PokecubeCore.LOGGER.debug("Damage Player:" + healthP + "    Poke:" + playerHealth);
-	            
-	            /**
-	             * If this is going to kill the player, do it with an attack, as
-	             * this will properly kill the player.
-	             */
-	            //dano aleatório aki
-//	            if (health < playerHealth)
-//	            {
-//	                final DamageSource source = this.lastDamage == null ? DamageSource.GENERIC : this.lastDamage;
-//	                final float amount = playerHealth - health;
-//	                source.setDamageBypassesArmor().setDamageIsAbsolute();
-//	                player.attackEntityFrom(source, amount);
-//	            }
-//	            else {
-//	            	player.setHealth(health);
-//	            }
-	
-	            // Sync pokehealth to player health.
-	            playerHealth = player.getHealth();
-	            poke.setHealth(playerHealth);
-	
-	            this.lastDamage = null;
+//	            float playerHealth = player.getHealth();
+//	
+//	            // Sync pokehealth to player health.
+//	            playerHealth = pokemob.getHealth();
+//	            poke.setHealth(playerHealth);
 	
 	            health = playerHealth;
-	            
-	//            PokecubeCore.LOGGER.debug("Info Player:" + health + "Poke:" + playerHealth);
 	
 	            final PacketTransform packet = new PacketTransform();
-	            packet.id = player.getEntityId();
+	            //packet.getTag().putInt("__entityid__", player.getEntity().getId());
+	            packet.id = player.getEntity().getId();
 	            packet.getTag().putBoolean("U", true);
 	            packet.getTag().putFloat("H", health);
 	            packet.getTag().putFloat("M", poke.getMaxHealth());
-//	            PacketTransform.sendPacket(player, (ServerPlayerEntity) player);
+	            PacketTransform.ASSEMBLY.sendTo(packet, (ServerPlayerEntity) player);
 	
 	            // Fixes the inventories appearing to vanish
 	            if (player.getPersistentData().contains("_pokeplayer_evolved_") && player.getPersistentData().getLong(
-	                    "_pokeplayer_evolved_") > player.getEntityWorld().getGameTime()) ((ServerPlayerEntity) player)
-	                            .sendAllContents(player.container, player.container.inventoryItemStacks);
+	                    "_pokeplayer_evolved_") > player.getEntity().level.getGameTime()) ((ServerPlayerEntity) player)
+	                            .refreshContainer(player.containerMenu, player.containerMenu.getItems());
 	            else player.getPersistentData().remove("_pokeplayer_evolved_");
 	        }
     	}
@@ -210,14 +203,14 @@ public class PokeInfo extends PlayerData
         if (player.isCreative()) {
         	num = 20;
         }
-        player.getFoodStats().setFoodLevel(num);
+        player.getFoodData().setFoodLevel(num);
 
-        this.updateFloating(player);
+//        this.updateFloating(player);
         this.updateFlying(player);
         this.updateSwimming(player);
 
         // Synchronize the hitbox locations
-        poke.setPosition(player.getPosX(), player.getPosY(), player.getPosZ());
+        poke.setPos(player.getX(), player.getY(), player.getZ());
     }
 
     public void clear()
@@ -229,7 +222,7 @@ public class PokeInfo extends PlayerData
 
     public void save(final PlayerEntity player)
     {
-        if (!player.getEntityWorld().isRemote) PlayerDataHandler.getInstance().save(player.getCachedUniqueIdString(),
+        if (!player.getEntity().level.isClientSide()) PlayerDataHandler.getInstance().save(player.getStringUUID(), //getEntity().level.getCachedUniqueIdString(),
                 this.getIdentifier());
     }
 
@@ -237,10 +230,14 @@ public class PokeInfo extends PlayerData
     {
         if (this.pokemob == null) return;
         final boolean fly = this.pokemob.floats() || this.pokemob.flys();
-        if (fly && !player.abilities.isCreativeMode)
+        boolean noFloat = pokemob.getLogicState(LogicStates.SITTING) || pokemob.getLogicState(LogicStates.SLEEPING)
+                || pokemob.isGrounded()
+                || (pokemob.getStatus() & (IMoveConstants.STATUS_SLP + IMoveConstants.STATUS_FRZ)) > 0;
+                
+        if (fly && !player.isCreative() && !noFloat)
         {
-            player.abilities.allowFlying = set;
-            player.sendPlayerAbilities();
+            player.abilities.flying = set;
+            player.onUpdateAbilities();
         }
     }
 
@@ -250,25 +247,28 @@ public class PokeInfo extends PlayerData
         if (this.pokemob.floats() || this.pokemob.flys())
         {
             player.fallDistance = 0;
-            if (player instanceof ServerPlayerEntity) ((ServerPlayerEntity) player).connection.floatingTickCount = 0;
+            if (player instanceof ServerPlayerEntity) ((ServerPlayerEntity) player).connection.aboveGroundTickCount = 0;
         }
     }
-
-    private void updateFloating(final PlayerEntity player)
-    {
-        if (this.pokemob == null) return;
-        if (!player.isSneaking() && this.pokemob.floats() && !player.isElytraFlying())
-        {
-            // TODO fix floating effects
-        }
-    }
+//
+//    private void waitFly(final PlayerEntity player)
+//    {
+//        if (this.pokemob == null) return;
+//        if (!player.isCrouching() && this.pokemob.floats() && !player.isFallFlying())
+//        {
+//            boolean noFloat = pokemob.getLogicState(LogicStates.SITTING) || pokemob.getLogicState(LogicStates.SLEEPING)
+//                    || pokemob.isGrounded()
+//                    || (pokemob.getStatus() & (IMoveConstants.STATUS_SLP + IMoveConstants.STATUS_FRZ)) > 0;
+//
+//            if ()!noFloat)
+//        }
+//    }
 
     private void updateSwimming(final PlayerEntity player)
     {
         if (this.pokemob == null) return;
         if (this.pokemob.getPokedexEntry().swims() || this.pokemob.isType(PokeType.getType("water"))) { 
-        	player.setAir(300);
-        	
+        	player.setAirSupply(300);      	
         }
     }
 
@@ -309,9 +309,9 @@ public class PokeInfo extends PlayerData
         if (this.pokemob != null)
         {
             this.stack = PokecubeManager.pokemobToItem(this.pokemob);
-            this.stack.write(tag);
+            this.stack.save(tag);
         }
-        else if (!this.stack.isEmpty()) this.stack.write(tag);
+        else if (!this.stack.isEmpty()) this.stack.save(tag);
         tag.putFloat("h", this.originalHeight);
         tag.putFloat("w", this.originalWidth);
         tag.putFloat("hp", this.originalHP);
@@ -320,7 +320,7 @@ public class PokeInfo extends PlayerData
     @Override
     public void readFromNBT(final CompoundNBT tag)
     {
-        this.stack = ItemStack.read(tag);
+        this.stack = ItemStack.of(tag);
         this.originalHeight = tag.getFloat("h");
         this.originalWidth = tag.getFloat("w");
         this.originalHP = tag.getFloat("hp");
@@ -361,9 +361,9 @@ public class PokeInfo extends PlayerData
 
     public static IPokemob getPokemob(final PlayerEntity player)
     {
-        if (player == null || player.getUniqueID() == null) return null;
+        if (player == null || player.getUUID() == null) return null;
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
-        return info.getPokemob(player.getEntityWorld());
+        return info.getPokemob(player.getEntity().level);
     }
 
     public static void updateInfo(final PlayerEntity player, final World world)
