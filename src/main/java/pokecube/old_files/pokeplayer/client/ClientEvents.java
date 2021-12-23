@@ -1,4 +1,4 @@
-package pokecube.pokeplayer.client;
+//package pokecube.pokeplayer.client;
 
 //import java.util.UUID;
 //import net.minecraft.client.Minecraft;
@@ -25,8 +25,8 @@ package pokecube.pokeplayer.client;
 //import pokecube.pokeplayer.network.handlers.Stance;
 //import thut.core.common.handlers.PlayerDataHandler;
 
-public class ClientEvents
-{	
+//public class ClientEvents
+//{	
 //    public IPokemob getPokemob(final PlayerEntity player)
 //    {
 //        final IPokemob ret = PokeInfo.getPokemob(player);
@@ -87,4 +87,4 @@ public class ClientEvents
 //            }
 //        }
 //    }
-}
+//}

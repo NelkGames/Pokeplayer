@@ -1,43 +1,46 @@
 package pokecube.pokeplayer.inventory;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.ContainerType;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import pokecube.core.PokecubeItems;
 import pokecube.core.interfaces.IPokemob;
 import pokecube.pokeplayer.PokeInfo;
 import thut.core.common.handlers.PlayerDataHandler;
 
-public class ContainerPokemob extends Container
+public class ContainerPokemob extends AbstractContainerMenu
 {
-	private IInventory	pokemobInv;
-	private PlayerEntity playerEntity;
-	public ContainerPokemob(ContainerType<?> type, int id)
+	private Container	pokemobInv;
+	private Player playerEntity;
+	private ItemStack carried = ItemStack.EMPTY;
+	
+	public ContainerPokemob(MenuType<?> type, int id)
 	{
 		super(type, id);
-		PlayerEntity player = playerEntity;
+		Player player = playerEntity;
 	    final IPokemob e = PokeInfo.getPokemob(player);
-	    final IInventory pokeInv;
-        PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
+	    final Container pokeInv;
+	    PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
         pokeInv = info.pokeInventory;
-	    IInventory playerInv = player.inventory;
+        Container playerInv = player.getInventory();
 		this.pokemobInv = pokeInv;
 		byte b0 = 3;
-		pokeInv.openInventory(null);
+		pokeInv.startOpen(null);
 		int i = (b0 - 4) * 18;
 		int slot = 0;
 		this.addSlot(new Slot(pokeInv, slot++, 8, 18)
 		{
 			/** Check if the stack is a valid item for this slot. Always true
 			 * beside for the armor slots. */
+			
 			@Override
-			public boolean isItemValid(ItemStack stack)
+			public boolean mayPlace(ItemStack stack)
 			{
-				return super.isItemValid(stack) && stack.getItem() == Items.SADDLE && !this.getHasStack();
+				return super.mayPlace(stack) && stack.getItem() == Items.SADDLE && !this.getItem().isStackable();
 			}
 		});
 		this.addSlot(new Slot(pokeInv, slot++, 8, 36)
@@ -45,43 +48,36 @@ public class ContainerPokemob extends Container
             
             /** Returns the maximum stack size for a given slot (usually the
 			 * same as getInventoryStackLimit(), but 1 in the case of armor
-			 * slots) */
+			 * slots) */			
 			@Override
-			public int getSlotStackLimit()
-			{
+			public int getMaxStackSize() {
 				return 1;
 			}
 
             /** Check if the stack is a valid item for this slot. Always true
 			 * beside for the armor slots. */
 			@Override
-			public boolean isItemValid(ItemStack stack)
+			public boolean mayPlace(ItemStack stack)
 			{
 				return PokecubeItems.isValidHeldItem(stack);
 			}
 		    
             @Override
-            public ItemStack onTake(PlayerEntity playerIn, ItemStack stack)
+            public void onTake(Player playerIn, ItemStack stack)
             {
-                ItemStack old = getStack();
-//                if(Dist.DEDICATED_SERVER != null)
-//                {
-                    e.getPokedexEntry().onHeldItemChange(stack, old, e);
-//                }
-                return super.onTake(playerIn, stack);
+                ItemStack old = getItem();
+                e.getPokedexEntry().onHeldItemChange(stack, old, e);
+                return;
             }
 
 			/**
              * Helper method to put a stack in the slot.
              */
             @Override
-            public void putStack(ItemStack stack)
+            public void set(ItemStack stack)
             {
-                super.putStack(stack);
-//                if(Dist.DEDICATED_SERVER != null)
-//                {
-                    e.setHeldItem(stack);
-//                }
+            	e.setHeldItem(stack);
+                super.set(stack);
             }
 		});
 		int j;
@@ -96,7 +92,7 @@ public class ContainerPokemob extends Container
 					/** Check if the stack is a valid item for this slot. Always
 					 * true beside for the armor slots. */
 					@Override
-					public boolean isItemValid(ItemStack stack)
+					public boolean mayPlace(ItemStack stack)
 					{
 						return PokecubeItems.isValidHeldItem(stack);
 					}
@@ -118,58 +114,65 @@ public class ContainerPokemob extends Container
 		}
 	}
 
-	@Override
-	public boolean canInteractWith(PlayerEntity player)
-	{
+	public boolean isSynched(Player player) {
 		return true;
 	}
 
+	
+	public void setCarried(ItemStack stack) {
+	      this.carried = stack;
+	   }
+	
 	/** Called when the container is closed. */
 	@Override
-	public void onContainerClosed(PlayerEntity player)
-	{
-		super.onContainerClosed(player);
-		this.pokemobInv.closeInventory(player);
+	public void removed(Player player) {
+		super.removed(player);
+		player.drop(carried, true);
 	}
 
 	/** Called when a player shift-clicks on a slot. You must override this or
-	 * you will crash when someone does that. */
+	 * you will crash when someone does that. */	
 	@Override
-	public ItemStack transferStackInSlot(PlayerEntity player, int slotId)
+	public ItemStack quickMoveStack(Player player, int slotId)
 	{
 		ItemStack itemstack = ItemStack.EMPTY;
-		Slot slot = this.inventorySlots.get(slotId);
+		Slot slot = this.slots.get(slotId);
 
-		if (slot != null && slot.getHasStack())
+		if (slot != null && slot.getItem().isStackable())
 		{
-			ItemStack itemstack1 = slot.getStack();
+			ItemStack itemstack1 = slot.getItem().getContainerItem();
 			itemstack = itemstack1.copy();
 
-			if (slotId < this.pokemobInv.getSizeInventory())
+			if (slotId < this.pokemobInv.getContainerSize())
 			{
-				if (!this.mergeItemStack(itemstack1, this.pokemobInv.getSizeInventory(), this.inventorySlots.size(),
+				if (!this.moveItemStackTo(itemstack1, this.pokemobInv.getContainerSize(), this.slots.size(),
 						true)) { return ItemStack.EMPTY; }
 			}
-			else if (this.getSlot(1).isItemValid(itemstack1) && !this.getSlot(1).getHasStack())
+			else if (this.getSlot(1).mayPlace(itemstack1) && !this.getSlot(1).hasItem())
 			{
-			    this.getSlot(1).putStack(slot.getStack().split(1));
+			    this.getSlot(1).getMaxStackSize(slot.getItem().split(1));
 			}
-			else if (this.getSlot(0).isItemValid(itemstack1))
+			else if (this.getSlot(0).mayPlace(itemstack1))
 			{
-				if (!this.mergeItemStack(itemstack1, 0, 1, false)) { return ItemStack.EMPTY; }
+				if (!this.moveItemStackTo(itemstack1, 0, 1, false)) { return ItemStack.EMPTY; }
 			}
-			else if (this.pokemobInv.getSizeInventory() <= 2
-					|| !this.mergeItemStack(itemstack1, 2, this.pokemobInv.getSizeInventory(), false)) { return ItemStack.EMPTY; }
+			else if (this.pokemobInv.getContainerSize() <= 2
+					|| !this.moveItemStackTo(itemstack1, 2, this.pokemobInv.getContainerSize(), false)) { return ItemStack.EMPTY; }
 
             if (!itemstack1.isEmpty())
 			{
-				slot.putStack(ItemStack.EMPTY);
+				slot.getMaxStackSize(ItemStack.EMPTY);
 			}
 			else
 			{
-				slot.onSlotChanged();
+				slot.setChanged();
 			}
 		}
 		return itemstack;
+	}
+
+	@Override
+	public boolean stillValid(Player playerIn) {
+		return true;
 	}
 }

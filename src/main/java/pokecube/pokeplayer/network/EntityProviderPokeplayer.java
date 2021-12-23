@@ -1,9 +1,9 @@
 package pokecube.pokeplayer.network;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import pokecube.core.network.EntityProvider;
 import pokecube.pokeplayer.PokeInfo;
 import thut.core.common.handlers.PlayerDataHandler;
@@ -16,12 +16,13 @@ public class EntityProviderPokeplayer extends EntityProvider
     }
 
     @Override
-    public Entity getEntity(final World world, final int id, final boolean expectsPokemob)
+    public Entity getEntity(final Level world, final int id, final boolean expectsPokemob)
     {
-        final Entity ret = world.getEntityByID(id);
-        if (expectsPokemob && ret instanceof PlayerEntity)
+        final Entity ret = world.getEntity(id);
+        if (expectsPokemob && ret instanceof Player)
         {
-            final PlayerEntity player = Minecraft.getInstance().player;
+            Minecraft instance = Minecraft.getInstance();
+			final Player player = instance.player;
             final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
             if (info.getPokemob(world) != null) return info.getPokemob(world).getEntity();
         }

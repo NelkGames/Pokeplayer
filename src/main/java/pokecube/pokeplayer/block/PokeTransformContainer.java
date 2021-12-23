@@ -2,29 +2,44 @@ package pokecube.pokeplayer.block;
 
 import java.util.Objects;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.IWorldPosCallable;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import pokecube.pokeplayer.init.BlockInit;
 import pokecube.pokeplayer.init.ContainerInit;
 import pokecube.pokeplayer.tileentity.TileEntityTransformer;
 
-public class PokeTransformContainer extends Container {
+public class PokeTransformContainer extends AbstractContainerMenu {
 	
-	public final TileEntityTransformer tileEntity;
-	private final IWorldPosCallable canInteract;
+	public final TileEntityTransformer container;
+	public final ContainerLevelAccess acess;
 	
-	public PokeTransformContainer(final int windowID, final PlayerInventory playerInv, final TileEntityTransformer tileEntityIn) {
-		super(ContainerInit.TRANSFORM_CONTAINER.get(), windowID);
-		this.tileEntity = tileEntityIn;
-		this.canInteract = IWorldPosCallable.of(tileEntityIn.getWorld(), tileEntityIn.getPos());
-		
-		this.addSlot(new Slot(tileEntityIn, 0, 81, 36));
+//	private PokeTransformContainer(MenuType<?> containerType, int windowId, Inventory playerInventory, int slot) {
+//		this(containerType, slot, playerInventory, new SimpleContainer(slot), slot);
+//	}
+//	
+//	public static PokeTransformContainer oneSlot (int slots, Inventory playerInventory) {
+//		return new PokeTransformContainer(ContainerInit.TRANSFORM_CONTAINER.get(), slots, playerInventory, 1);		
+//	}
+//	
+//	public static PokeTransformContainer oneSlot (int slots, Inventory playerInventory, Container container) {
+//		return new PokeTransformContainer(ContainerInit.TRANSFORM_CONTAINER.get(), slots, playerInventory, 1);		
+//	}
+	
+	
+	
+	public PokeTransformContainer(TileEntityTransformer containerType, int windowId, Inventory playerInventory) {
+		super(ContainerInit.TRANSFORM_CONTAINER.get(), windowId);
+		this.container = containerType;
+//		containerType.startOpen(playerInventory.player);
+		this.acess = ContainerLevelAccess.create(containerType.getLevel(), containerType.getBlockPos());
+		this.addSlot(new Slot(containerType, 0, 81, 36));
 		
 		//Main Inventory
 		int startX = 8;
@@ -32,25 +47,25 @@ public class PokeTransformContainer extends Container {
 		int slotSizePlus2 = 18;
 		for (int row = 0; row < 3; row++) {
 			for (int column = 0; column < 9; column++) {
-				this.addSlot(new Slot(playerInv, 9 + (row * 9) + column, startX + (column * slotSizePlus2),
+				this.addSlot(new Slot(playerInventory, 9 + (row * 9) + column, startX + (column * slotSizePlus2),
 								startY + (row * slotSizePlus2)));
 			}
 		}
 		
 		//Hotbar
 		for(int column = 0; column < 9; column++) {
-			this.addSlot(new Slot(playerInv, column, startX + (column * slotSizePlus2), 142));
+			this.addSlot(new Slot(playerInventory, column, startX + (column * slotSizePlus2), 142));
 		}
 	}
 	
-	public PokeTransformContainer (final int windowID, final PlayerInventory playerInv, final PacketBuffer data) {
-		this(windowID, playerInv, getTileEntity(playerInv, data));		
+	public PokeTransformContainer (final int windowID, final Inventory playerInv, final FriendlyByteBuf data) {
+		this(getTileEntity(playerInv, data), windowID, playerInv);
 	}
 	
-	private static TileEntityTransformer getTileEntity(final PlayerInventory playerIn, final PacketBuffer data) {
+	private static TileEntityTransformer getTileEntity(final Inventory playerIn, final FriendlyByteBuf data) {
 		Objects.requireNonNull(playerIn, "");
 		Objects.requireNonNull(data, "");
-		final TileEntity tileAtPos = playerIn.player.world.getTileEntity(data.readBlockPos());
+		final BlockEntity tileAtPos = playerIn.player.level.getBlockEntity(data.readBlockPos());
 		if(tileAtPos instanceof TileEntityTransformer) {
 			return (TileEntityTransformer) tileAtPos;
 		}
@@ -58,32 +73,41 @@ public class PokeTransformContainer extends Container {
 	}
 	
 	@Override
-	public boolean canInteractWith(PlayerEntity playerIn) {
-		return isWithinUsableDistance(canInteract, playerIn, BlockInit.TRANSFORM.get());
-	}
-	
-	@Override
-	public ItemStack transferStackInSlot(PlayerEntity playerIn, int index) {
+	public ItemStack quickMoveStack(Player playerIn, int index) {
 		ItemStack itemStack = ItemStack.EMPTY;
-		Slot slot = this.inventorySlots.get(index);
-		if(slot != null && slot.getHasStack()) {
-			ItemStack itemStack1 = slot.getStack();
+		Slot slot = this.slots.get(index);
+		if(slot != null && slot.getItem().isStackable()) {
+			ItemStack itemStack1 = slot.getItem().copy();
 			itemStack = itemStack1.copy();
 			if(index < 1) {
-				if (!this.mergeItemStack(itemStack1, 1, this.inventorySlots.size(), true)) {
+				if (!this.moveItemStackTo(itemStack1, 1, this.slots.size(), true)) {
 					return ItemStack.EMPTY;
 				}
-			}else if (!this.mergeItemStack(itemStack1, 0, 1, false)) {
+			}else if (!this.moveItemStackTo(itemStack1, 0, 1, false)) {
 				return ItemStack.EMPTY;
 			}
 			
 			if(itemStack1.isEmpty()) {
-				slot.putStack(ItemStack.EMPTY);
+				slot.set(ItemStack.EMPTY);
 			}else {
-				slot.onSlotChanged();
+				slot.setChanged();
 			}
 		}
 		
 		return itemStack;
+	}
+	
+	@Override
+	public boolean stillValid(Player playerIn) {
+		return stillValid(acess, playerIn, BlockInit.TRANSFORM.get());
+	}
+	
+//	public void removed(Player playerEntity) {
+//		super.removed(playerEntity);
+//		this.container.stopOpen(playerEntity);
+//	}
+
+	public Container getContainer() {
+		return this.container;
 	}
 }
