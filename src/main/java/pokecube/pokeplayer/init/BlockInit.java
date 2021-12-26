@@ -3,9 +3,11 @@ package pokecube.pokeplayer.init;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.PressurePlateBlock.Sensitivity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.MaterialColor;
 import net.minecraftforge.registries.RegistryObject;
 import pokecube.core.PokecubeItems;
 import pokecube.pokeplayer.Pokeplayer;
@@ -19,7 +21,8 @@ public class BlockInit {
     static
     {
     	TRANSFORM = Pokeplayer.BLOCKS.register("pokeplayer_transform",
-    			() -> new TransformBlock(Sensitivity.EVERYTHING, BlockBehaviour.Properties.of(Material.STONE).strength(0,5f)));
+    			() -> new TransformBlock(Sensitivity.EVERYTHING, BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_RED)
+    					.strength(2000).sound(SoundType.ANVIL).requiresCorrectToolForDrops()));
     }
     
     public static void init()

@@ -6,34 +6,31 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.CompoundContainer;
-import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import pokecube.core.database.Database;
 import pokecube.core.database.PokedexEntry;
 import pokecube.core.interfaces.IPokemob;
 import pokecube.core.items.pokecubes.PokecubeManager;
-import pokecube.legends.blocks.containers.GenericBarrel;
-import pokecube.legends.tileentity.GenericBarrelTile;
 import pokecube.pokeplayer.PokeInfo;
 import pokecube.pokeplayer.Pokeplayer;
 import pokecube.pokeplayer.Reference;
 import pokecube.pokeplayer.block.PokeTransformContainer;
-import pokecube.pokeplayer.block.TransformBlock;
 import pokecube.pokeplayer.init.TileEntityInit;
+import thut.api.IOwnable;
+import thut.api.OwnableCaps;
+import thut.api.block.IOwnableTE;
 import thut.api.entity.CopyCaps;
 import thut.api.entity.ICopyMob;
 import thut.core.common.handlers.PlayerDataHandler;
@@ -73,9 +70,8 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     }
  
     @Override
-    public CompoundTag save(final CompoundTag compound)
+    public void saveAdditional(final CompoundTag compound)
     {
-        super.save(compound);
         ContainerHelper.saveAllItems(compound, this.items);
         if (this.items.get(0).isEmpty())
         {
@@ -85,7 +81,7 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         }
         if (this.nums != null) compound.putIntArray("nums", this.nums);
         compound.putInt("stepTick", this.stepTick);
-        return compound;
+        super.saveAdditional(compound);
     }
 
     @Override
@@ -162,7 +158,8 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     @Override
     public boolean canOpen(final Player player)
     {
-        if (this.level.getBlockEntity(this.getBlockPos()) != this) return false;
+    	IOwnable ownable = OwnableCaps.getOwnable(this);
+    	if (ownable instanceof IOwnableTE te && !te.canEdit(player)) return false;
         else return player.distanceToSqr(this.getBlockPos().getX() + 0.5D, this.getBlockPos().getY() + 0.5D, this.getBlockPos().getZ()
                 + 0.5D) <= 64.0D;
     }
@@ -195,30 +192,6 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     {
         return stack;
     }
-    
-//    public static int getOpenCount(final Level world, final BaseContainerBlockEntity lockableTileEntity, final int i,
-//            final int j, final int k, final int l, int r)
-//    {
-//        if (!world.isClientSide && r != 0 && (i + j + k + l) % 200 == 0) r = TileEntityTransformer.getOpenCount(world,
-//                lockableTileEntity, j, k, l);
-//
-//        return r;
-//    }
-//    
-//    public static int getOpenCount(final Level world, final BaseContainerBlockEntity lockableTileEntity, final int j,
-//            final int k, final int l)
-//    {
-//        int i = 0;
-//        for (final Player player : world.getEntitiesOfClass(Player.class, new AABB(j - 5.0F, k - 5.0F, l - 5.0F, j + 1
-//                + 5.0F, k + 1 + 5.0F, l + 1 + 5.0F)))
-//            if (player.containerMenu instanceof PokeTransformContainer)
-//            {
-//                final Container iinventory = ((PokeTransformContainer) player.containerMenu).getContainer();
-//                if (iinventory == lockableTileEntity || iinventory instanceof CompoundContainer
-//                        && ((CompoundContainer) iinventory).contains(lockableTileEntity)) ++i;
-//            }
-//        return i;
-//    }
 
 	public void onWalkedOn(final Entity entityIn)
     {
@@ -276,6 +249,7 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             PokeInfo.setPokemob(player, null);
             //Reset Morph
             copy.setCopiedID(null);
+            player.removeEffect(MobEffects.WATER_BREATHING);
             //Back item for block inventory
             this.items.set(0, pokemob);
             CapabilitySync.sendUpdate(player);

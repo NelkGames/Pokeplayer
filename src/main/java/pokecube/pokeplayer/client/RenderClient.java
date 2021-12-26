@@ -1,9 +1,15 @@
 package pokecube.pokeplayer.client;
 
+import com.google.common.collect.Lists;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
 import pokecube.core.interfaces.IMoveConstants;
 import pokecube.core.interfaces.IPokemob;
@@ -44,6 +50,7 @@ public class RenderClient
             final float prev = event.player.getPersistentData().getFloat("prevStepUp");
             event.player.getPersistentData().remove("prevStepUp");
             event.player.maxUpStep = prev;
+            event.player.refreshDimensions();
         }
     }
 
@@ -69,12 +76,23 @@ public class RenderClient
             event.realEntity.setPose(Pose.STANDING);
 
         final IPokemob pokemob = CapabilityPokemob.getPokemobFor(event.getEntity());
+        
+        //Water_Breathing
+        final ItemStack stack = new ItemStack(Blocks.BARRIER);
+        
+        final MobEffectInstance breathing = new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 0, false, true, true);
+        breathing.setCurativeItems(Lists.newArrayList(stack));
+        
         if (pokemob != null && player.getPersistentData().contains("is_a_player") == false)
         {
         	RenderClient.setFlying(player, pokemob);
         	RenderClient.updateFloating(player, pokemob);
         	RenderClient.updateFlying(player, pokemob);
-        	RenderClient.updateSwimming(player, pokemob);
+	        RenderClient.updateSwimming(player, pokemob);
+	        
+	        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water")) && 
+	        		player.isEyeInFluid(FluidTags.WATER))
+	            player.addEffect(breathing);
         }
     }
     
@@ -95,7 +113,7 @@ public class RenderClient
     public static void updateFlying(final Player player, final IPokemob pokemob)
     {
         if (pokemob == null) return;
-        if (pokemob.floats() || pokemob.flys())
+        if (pokemob.getPokedexEntry().floats() || pokemob.getPokedexEntry().flys())
         {
             player.fallDistance = 0;
             if (player instanceof ServerPlayer) ((ServerPlayer) player).connection.aboveGroundTickCount = 0;
@@ -114,7 +132,15 @@ public class RenderClient
 
     public static void updateSwimming(final Player player, final IPokemob pokemob)
     {
+    	//Water_Breathing
+//        final ItemStack stack = new ItemStack(Blocks.BARRIER);
+//        
+//        final MobEffectInstance breathing = new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 1, false, true, true);
+//        breathing.setCurativeItems(Lists.newArrayList(stack));
+//        
         if (pokemob == null) return;
-        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water"))) player.setAirSupply(600);
+//        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water")) && player.isEyeInFluid(FluidTags.WATER)) {
+//            player.addEffect(breathing);
+//        }     
     }
 }

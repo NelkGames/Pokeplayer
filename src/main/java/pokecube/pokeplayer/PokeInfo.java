@@ -67,7 +67,6 @@ public class PokeInfo extends PlayerData
         this.pokemob = null;
         this.stack = ItemStack.EMPTY;
         this.pokeInventory = null;
-        player.setPose(Pose.STANDING);
         this.save(player);
         if (!player.level.isClientSide()) CapabilitySync.sendUpdate(player);
     }
@@ -78,6 +77,8 @@ public class PokeInfo extends PlayerData
         final DataSync sync = SyncHandler.getData(player);
         if (sync instanceof DataSyncWrapper) ((DataSyncWrapper) sync).wrapped = this.pokemob.dataSync();
         this.save(player);
+        player.refreshDimensions();
+        player.getEyeHeight(Pose.STANDING);
         if (!player.level.isClientSide())
         {
         	CapabilitySync.sendUpdate(player);
