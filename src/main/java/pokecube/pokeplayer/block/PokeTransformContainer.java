@@ -20,24 +20,9 @@ public class PokeTransformContainer extends AbstractContainerMenu {
 	public final TileEntityTransformer container;
 	public final ContainerLevelAccess acess;
 	
-//	private PokeTransformContainer(MenuType<?> containerType, int windowId, Inventory playerInventory, int slot) {
-//		this(containerType, slot, playerInventory, new SimpleContainer(slot), slot);
-//	}
-//	
-//	public static PokeTransformContainer oneSlot (int slots, Inventory playerInventory) {
-//		return new PokeTransformContainer(ContainerInit.TRANSFORM_CONTAINER.get(), slots, playerInventory, 1);		
-//	}
-//	
-//	public static PokeTransformContainer oneSlot (int slots, Inventory playerInventory, Container container) {
-//		return new PokeTransformContainer(ContainerInit.TRANSFORM_CONTAINER.get(), slots, playerInventory, 1);		
-//	}
-	
-	
-	
 	public PokeTransformContainer(TileEntityTransformer containerType, int windowId, Inventory playerInventory) {
 		super(ContainerInit.TRANSFORM_CONTAINER.get(), windowId);
 		this.container = containerType;
-//		containerType.startOpen(playerInventory.player);
 		this.acess = ContainerLevelAccess.create(containerType.getLevel(), containerType.getBlockPos());
 		this.addSlot(new Slot(containerType, 0, 81, 36));
 		
@@ -101,11 +86,6 @@ public class PokeTransformContainer extends AbstractContainerMenu {
 	public boolean stillValid(Player playerIn) {
 		return stillValid(acess, playerIn, BlockInit.TRANSFORM.get());
 	}
-	
-//	public void removed(Player playerEntity) {
-//		super.removed(playerEntity);
-//		this.container.stopOpen(playerEntity);
-//	}
 
 	public Container getContainer() {
 		return this.container;

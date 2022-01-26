@@ -1,15 +1,21 @@
 package pokecube.pokeplayer.tileentity;
 
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
+
+import com.google.common.collect.Lists;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -19,15 +25,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import pokecube.core.PokecubeCore;
 import pokecube.core.database.Database;
 import pokecube.core.database.PokedexEntry;
 import pokecube.core.interfaces.IPokemob;
+import pokecube.core.interfaces.capabilities.CapabilityPokemob;
 import pokecube.core.items.pokecubes.PokecubeManager;
+import pokecube.core.utils.Tools;
 import pokecube.pokeplayer.PokeInfo;
 import pokecube.pokeplayer.Pokeplayer;
 import pokecube.pokeplayer.Reference;
 import pokecube.pokeplayer.block.PokeTransformContainer;
 import pokecube.pokeplayer.init.TileEntityInit;
+import pokecube.pokeplayer.network.PacketTransform;
 import thut.api.IOwnable;
 import thut.api.OwnableCaps;
 import thut.api.block.IOwnableTE;
@@ -41,6 +51,12 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     protected NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
 
     int[]   nums     = {};
+    
+    int     lvl      = 5;
+    boolean random   = false;
+    boolean pubby    = false;
+    boolean edit     = false;
+    
     int     stepTick = Pokeplayer.config.ticksBlockUse;
 
     public TileEntityTransformer(final BlockEntityType<?> tileEntityType, final BlockPos pos, final BlockState state)
@@ -65,6 +81,11 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         }
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         if (nbt.contains("nums")) this.nums = nbt.getIntArray("nums");
+        //
+        if (nbt.contains("lvl")) this.lvl = nbt.getInt("lvl");
+        this.random = nbt.getBoolean("random");
+        this.pubby = nbt.getBoolean("public");
+        //
         this.stepTick = nbt.getInt("stepTick");
         ContainerHelper.loadAllItems(nbt, this.items);
     }
@@ -81,6 +102,12 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         }
         if (this.nums != null) compound.putIntArray("nums", this.nums);
         compound.putInt("stepTick", this.stepTick);
+        
+        //
+        compound.putInt("lvl", this.lvl);
+        compound.putBoolean("random", this.random);
+        compound.putBoolean("public", this.pubby);
+        //
         super.saveAdditional(compound);
     }
 
@@ -179,10 +206,10 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     @Override
     public CompoundTag getUpdateTag()
     {
-        return this.save(new CompoundTag());
+		return this.saveWithoutMetadata();
     }
 
-    @Override
+	@Override
     public void handleUpdateTag(final CompoundTag tag)
     {
         this.load(tag);
@@ -210,7 +237,8 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             final PokedexEntry pokedexEntry = Database.getEntry(pokemob);
             final ICopyMob copy = CopyCaps.get(player);
             
-            if (playerTrainer != null && pokemob != null && pokemob.getHealth() != 0 && playerTrainer != player.getUUID())
+            if (playerTrainer != null && pokemob != null && 
+            		pokemob.getHealth() != 0 && playerTrainer != player.getUUID())
 	        {
             	// Sets info for player
             	PokeInfo.setPokemob(player, pokemob);
@@ -227,6 +255,13 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             }
             Pokeplayer.LOGGER.info("Converting {} to {}", player.getDisplayName().getString(), pokemob
                     .getPokedexEntry().getName());
+            
+            //
+            final ServerLevel worldIn = (ServerLevel) player.level;
+            for (final Player player2 : worldIn.players())
+             PacketTransform.sendPacket(player, (ServerPlayer) player2);
+            //
+            
             return;
         }
         if (!hasPokemob && isPokemob)
@@ -234,11 +269,20 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             final IPokemob poke = PokeInfo.getPokemob(player);
             final CompoundTag tag = poke.getEntity().serializeNBT();
             final ICopyMob copy = CopyCaps.get(player);
-                
+            
+            //
+            poke.setPokemonNickname(tag.getString("oldName"));
+            //
+            
             Pokeplayer.LOGGER.info("Converting {} back to a human", player.getDisplayName().getString());
-            tag.putBoolean("is_a_player", true);
-                      
+//            tag.putBoolean("is_a_player", true);
+            //
+            tag.remove("oldName");
+            tag.remove("playerID");
+            //
+            
             info.detach();
+            
             final ItemStack pokemob = PokecubeManager.pokemobToItem(poke);
             if (player.getAbilities().mayfly && !player.isCreative())
             {
@@ -253,13 +297,41 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             //Back item for block inventory
             this.items.set(0, pokemob);
             CapabilitySync.sendUpdate(player);
+            
+            //
+            final ServerLevel worldIn = (ServerLevel) player.level;
+            for (final Player player2 : worldIn.players())
+            	PacketTransform.sendPacket(player, (ServerPlayer) player2);
+            //
+            
             return;
         }
         Pokeplayer.LOGGER.info("Nothing happened to {}", player.getDisplayName().getString());
     }
 
+	@SuppressWarnings("resource")
 	private IPokemob getPokemob()
     {
+		//
+		if (this.random)
+        {
+            int num = 0;
+            if (this.nums != null && this.nums.length > 0) num = this.nums[new Random().nextInt(this.nums.length)];
+            else
+            {
+                final List<Integer> numbers = Lists.newArrayList(Database.data.keySet());
+                num = numbers.get(this.getLevel().random.nextInt(numbers.size()));
+            }
+            final Entity entity = PokecubeCore.createPokemob(Database.getEntry(num), this.getLevel());
+            final IPokemob pokemob = CapabilityPokemob.getPokemobFor(entity);
+            if (entity != null)
+            {
+                pokemob.setForSpawn(Tools.levelToXp(pokemob.getPokedexEntry().getEvolutionMode(), this.lvl), false);
+                pokemob.spawnInit();
+            }
+            return pokemob;
+        }
+		//
         final IPokemob pokemob = PokecubeManager.itemToPokemob(this.items.get(0), this.getLevel());
         return pokemob;
     }

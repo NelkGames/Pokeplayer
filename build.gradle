@@ -6,17 +6,25 @@ buildscript {
         flatDir {
           dirs 'libs'
         }
-        maven {url='https://dist.creeper.host/Sponge/maven'}
+        maven {url='https://repo.spongepowered.org/repository/maven-public/'}
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
     }
+}
+
+plugins {
+  id 'org.ajoberstar.grgit' version '2.3.0'
 }
 
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
+apply plugin: 'org.spongepowered.mixin'
+
+eclipseJdtApt.enabled = false
+eclipseFactoryPath.enabled = false
 
 ext {
     VERSION_COMPILE = "${version_compile}"
@@ -25,13 +33,13 @@ ext {
 }
 
 version = "${version_minecraft}-${VERSION_COMPILE}"
-group = 'thut'
+group = '${compile_group}'
 archivesBaseName = "${compile_name}"
 
-sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    mappings channel: 'snapshot', version: "${version_mappings}"
+    mappings channel: "${channel_mappings}", version: "${version_mappings}"
     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
     
     runs {
@@ -41,8 +49,9 @@ minecraft {
             properties '-XX': '+UnlockCommercialFeatures'
             properties '-XX': '+FlightRecorder'
             properties 'forge.logging.console.level': 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
             workingDirectory project.file('run').canonicalPath
-			arg "-mixin.config=pokecube.mixins.json"
             source sourceSets.main
         }
         server = {
@@ -50,6 +59,8 @@ minecraft {
             properties 'forge.logging.console.level': 'debug'
             properties '-XX': '+UnlockCommercialFeatures'
             properties '-XX': '+FlightRecorder'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
             workingDirectory project.file('run').canonicalPath
             source sourceSets.main
         }
@@ -57,7 +68,7 @@ minecraft {
             workingDirectory project.file('run').canonicalPath
             property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
             property 'forge.logging.console.level', 'debug'
-            args '--mod', 'pokeplayer', '--all', '--output', file('src/generated/resources/'), '--existing', sourceSets.main.resources.srcDirs[0]
+            args '--mod', '${mod_id}', '--all', '--output', file('src/generated/resources/'), '--existing', sourceSets.main.resources.srcDirs[0]
             source sourceSets.main
         }
     }
@@ -65,8 +76,10 @@ minecraft {
 
 repositories {
     maven {
-        name = "CurseForge"
-        url = "https://minecraft.curseforge.com/api/maven/"
+        url "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
     }
     flatDir {
         dirs 'libs'
@@ -76,11 +89,8 @@ repositories {
 dependencies {
     minecraft "net.minecraftforge:forge:${version_minecraft}-${version_forge}"
 
-    // The below line can be uncommented and adjusted if you provide the jar via /libs
-    //implementation "pokecube-aio-1.16.4-3.5.1-deobf"
-    
-    // If the above line is uncommented, the below should be commented out.
-    implementation "pokecube-aoi:pokecube-aio:release:deobf"
+    // Here we import the version of pokecube to use. Note that the curseforge page is 'aoi' rather than 'aio'
+    implementation fg.deobf("curse.maven:pokecube-aoi-${version_pokecube}")
 }
 
 // Example for how to get properties into the manifest for reading by the runtime..
@@ -113,5 +123,3 @@ def cleanTOML()
 {
     delete "./build/resources/main/META-INF/mods.toml" 
 }
-
-apply plugin: 'org.spongepowered.mixin'

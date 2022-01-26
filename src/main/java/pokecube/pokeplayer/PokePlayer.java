@@ -17,11 +17,11 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import pokecube.core.PokecubeCore;
-import pokecube.pokeplayer.client.RenderClient;
 import pokecube.pokeplayer.init.BlockInit;
 import pokecube.pokeplayer.init.Config;
 import pokecube.pokeplayer.init.ContainerInit;
 import pokecube.pokeplayer.init.TileEntityInit;
+import pokecube.pokeplayer.render.RenderPlayerPokemob;
 import thut.api.entity.CopyCaps;
 import thut.core.common.handlers.PlayerDataHandler;
 
@@ -47,11 +47,11 @@ public class Pokeplayer
     	PokecubeCore.POKEMOB_BUS.register(this);
     	
         MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.addListener(RenderClient::onCopyTick);
+        MinecraftForge.EVENT_BUS.addListener(RenderPlayerPokemob::onCopyTick);
         // Handles resetting flight permissions when un-setting mob
-        MinecraftForge.EVENT_BUS.addListener(RenderClient::onCopySet);
+        MinecraftForge.EVENT_BUS.addListener(RenderPlayerPokemob::onCopySet);
         // This syncs step height for the mob over
-        MinecraftForge.EVENT_BUS.addListener(RenderClient::onPlayerTick);
+        MinecraftForge.EVENT_BUS.addListener(RenderPlayerPokemob::onPlayerTick);
         
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         

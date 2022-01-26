@@ -1,4 +1,4 @@
-package pokecube.pokeplayer.client;
+package pokecube.pokeplayer.render;
 
 import com.google.common.collect.Lists;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +21,7 @@ import thut.api.entity.ICopyMob;
 import thut.api.entity.event.CopySetEvent;
 import thut.api.entity.event.CopyUpdateEvent;
 
-public class RenderClient
+public class RenderPlayerPokemob
 {
 	public static void onPlayerTick(final PlayerTickEvent event)
     {
@@ -80,15 +80,15 @@ public class RenderClient
         //Water_Breathing
         final ItemStack stack = new ItemStack(Blocks.BARRIER);
         
-        final MobEffectInstance breathing = new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 0, false, true, true);
+        final MobEffectInstance breathing = new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 0, false, false, true);
         breathing.setCurativeItems(Lists.newArrayList(stack));
         
-        if (pokemob != null && player.getPersistentData().contains("is_a_player") == false)
+        if (pokemob != null)
         {
-        	RenderClient.setFlying(player, pokemob);
-        	RenderClient.updateFloating(player, pokemob);
-        	RenderClient.updateFlying(player, pokemob);
-	        RenderClient.updateSwimming(player, pokemob);
+        	RenderPlayerPokemob.setFlying(player, pokemob);
+        	RenderPlayerPokemob.updateFloating(player, pokemob);
+        	RenderPlayerPokemob.updateFlying(player, pokemob);
+	        RenderPlayerPokemob.updateSwimming(player, pokemob);
 	        
 	        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water")) && 
 	        		player.isEyeInFluid(FluidTags.WATER))
@@ -132,15 +132,6 @@ public class RenderClient
 
     public static void updateSwimming(final Player player, final IPokemob pokemob)
     {
-    	//Water_Breathing
-//        final ItemStack stack = new ItemStack(Blocks.BARRIER);
-//        
-//        final MobEffectInstance breathing = new MobEffectInstance(MobEffects.WATER_BREATHING, 300, 1, false, true, true);
-//        breathing.setCurativeItems(Lists.newArrayList(stack));
-//        
-        if (pokemob == null) return;
-//        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water")) && player.isEyeInFluid(FluidTags.WATER)) {
-//            player.addEffect(breathing);
-//        }     
+        if (pokemob == null) return;  
     }
 }

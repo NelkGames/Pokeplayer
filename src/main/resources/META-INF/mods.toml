@@ -7,7 +7,7 @@ license="All rights reserved"
     modId="pokecube_pokeplayer"
     version="${file.jarVersion}"
     displayName="Pokécube Mystery Dungeon Addon"
-    authors="NelkGames"
+    authors="NelkGames, Thutmose"
     description='''
     Pokecube Addon introduction Mystery Dungeon System
     '''
