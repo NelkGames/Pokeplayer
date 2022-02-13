@@ -53,6 +53,11 @@ public class Pokeplayer
         // This syncs step height for the mob over
         MinecraftForge.EVENT_BUS.addListener(RenderPlayerPokemob::onPlayerTick);
         
+        //
+        MinecraftForge.EVENT_BUS.addListener(EventHandler::postPlayerTick);
+        PokecubeCore.POKEMOB_BUS.addListener(EventHandler::recall);
+        PokecubeCore.POKEMOB_BUS.addListener(EventHandler::evolve);
+        
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         
         CopyCaps.register(EntityType.PLAYER);

@@ -16,6 +16,7 @@ import pokecube.core.interfaces.IPokemob;
 import pokecube.core.interfaces.capabilities.CapabilityPokemob;
 import pokecube.core.interfaces.pokemob.ai.LogicStates;
 import pokecube.core.utils.PokeType;
+import pokecube.pokeplayer.PokeInfo;
 import thut.api.entity.CopyCaps;
 import thut.api.entity.ICopyMob;
 import thut.api.entity.event.CopySetEvent;
@@ -30,6 +31,7 @@ public class RenderPlayerPokemob
         if (event.player instanceof final ServerPlayer player)
         {
             final Entity cam = player.getCamera();
+            
             if (cam != player && cam instanceof Player)
             {
                 ICopyMob.copyPositions(player, cam);
@@ -84,11 +86,13 @@ public class RenderPlayerPokemob
         breathing.setCurativeItems(Lists.newArrayList(stack));
         
         if (pokemob != null)
-        {
+        {   
         	RenderPlayerPokemob.setFlying(player, pokemob);
         	RenderPlayerPokemob.updateFloating(player, pokemob);
         	RenderPlayerPokemob.updateFlying(player, pokemob);
 	        RenderPlayerPokemob.updateSwimming(player, pokemob);
+	        
+	        PokeInfo.updateCollision(player, player.level);
 	        
 	        if (pokemob.getPokedexEntry().swims() || pokemob.isType(PokeType.getType("water")) && 
 	        		player.isEyeInFluid(FluidTags.WATER))

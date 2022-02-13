@@ -12,12 +12,13 @@ import pokecube.core.PokecubeCore;
 import pokecube.core.interfaces.IPokemob;
 import pokecube.core.interfaces.pokemob.ai.LogicStates;
 import pokecube.core.interfaces.pokemob.commandhandlers.StanceHandler;
+import pokecube.core.network.pokemobs.PacketCommand.DefaultHandler;
 import pokecube.pokeplayer.PokeInfo;
 import pokecube.pokeplayer.network.PacketTransform;
 import thut.core.common.handlers.PlayerDataHandler;
 import thut.core.common.world.mobs.data.PacketDataSync;
 
-public class Stance extends StanceHandler
+public class Stance extends StanceHandler //DefaultHandler
 {
     public static final byte BUTTONTOGGLESIT = 2;
     public static final byte SELFINTERACT    = -2;
@@ -26,9 +27,7 @@ public class Stance extends StanceHandler
     boolean state;
     byte    key;
 
-    public Stance()
-    {
-    }
+    public Stance() {}
 
     public Stance(final Boolean state, final Byte key)
     {
@@ -39,10 +38,10 @@ public class Stance extends StanceHandler
     @Override
     public void handleCommand(final IPokemob pokemob) throws Exception
     {
-        super.handleCommand(pokemob);
+    	super.handleCommand(pokemob);
         // Start by handling the default stance messages.
         final StanceHandler defaults = new StanceHandler(
-                this.state, this.key);
+        		this.state, this.key);
         defaults.handleCommand(pokemob);
 
         // Handle pokeplayer specific things.
@@ -81,20 +80,20 @@ public class Stance extends StanceHandler
             }
         }
     }
-
-    @Override
-    public void readFromBuf(final ByteBuf buf)
-    {
-        super.readFromBuf(buf);
-        this.state = buf.readBoolean();
-        this.key = buf.readByte();
-    }
     
     @Override
-    public void writeToBuf(final ByteBuf buf)
+    public void writeToBuf(ByteBuf buf)
     {
         super.writeToBuf(buf);
-        buf.writeBoolean(this.state);
-        buf.writeByte(this.key);
+        buf.writeBoolean(state);
+        buf.writeByte(key);
+    }
+
+    @Override
+    public void readFromBuf(ByteBuf buf)
+    {
+        super.readFromBuf(buf);
+        state = buf.readBoolean();
+        key = buf.readByte();
     }
 }

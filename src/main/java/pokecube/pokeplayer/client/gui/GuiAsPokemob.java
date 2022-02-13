@@ -20,27 +20,30 @@ import pokecube.pokeplayer.PokeInfo;
 import thut.api.maths.Vector3;
 import thut.core.common.handlers.PlayerDataHandler;
 
-public class GUIAsPokeplayer extends GuiDisplayPokecubeInfo 
-{
+public class GuiAsPokemob extends GuiDisplayPokecubeInfo 
+{	
+	public GuiAsPokemob()
+    {
+        super();
+    }
+	
 	@Override
 	public IPokemob[] getPokemobsToDisplay() {
-		Minecraft minecraft = Minecraft.getInstance(); 
+		Minecraft minecraft = Minecraft.getInstance();
 		final Player player = minecraft.player;
 		final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
 		final IPokemob pokemob = info.getPokemob(player.level);
-		if (pokemob != null)
-			return new IPokemob[] { pokemob };
+		if (pokemob != null) return new IPokemob[] { pokemob };
 		return super.getPokemobsToDisplay();
 	}
 
 	@Override
 	public IPokemob getCurrentPokemob() {
-		Minecraft minecraft = Minecraft.getInstance(); 
+		Minecraft minecraft = Minecraft.getInstance();
 		final Player player = minecraft.player;
 		final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
 		final IPokemob pokemob = info.getPokemob(player.level);
-		if (pokemob != null)
-			return pokemob;
+		if (pokemob != null) return pokemob;
 		return super.getCurrentPokemob();
 	}
 
@@ -77,10 +80,10 @@ public class GUIAsPokeplayer extends GuiDisplayPokecubeInfo
 			}
 		}
 		if (target != null && !sameOwner && target instanceof LivingEntity)
-			PacketCommand.sendCommand(pokemob, Command.ATTACKENTITY, new AttackEntityHandler(target.getId()));
+			PacketCommand.sendCommand(pokemob, Command.ATTACKENTITY, new AttackEntityHandler(target.getId()).setFromOwner(true));
 		else if (targetLocation != null)
-			PacketCommand.sendCommand(pokemob, Command.ATTACKLOCATION, new AttackLocationHandler(targetLocation));
+			PacketCommand.sendCommand(pokemob, Command.ATTACKLOCATION, new AttackLocationHandler(targetLocation).setFromOwner(true));
 		else
-			PacketCommand.sendCommand(pokemob, Command.ATTACKNOTHING, new AttackNothingHandler());
+			PacketCommand.sendCommand(pokemob, Command.ATTACKNOTHING, new AttackNothingHandler().setFromOwner(true));
 	}
 }

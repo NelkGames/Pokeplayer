@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -32,6 +33,7 @@ import pokecube.core.interfaces.IPokemob;
 import pokecube.core.interfaces.capabilities.CapabilityPokemob;
 import pokecube.core.items.pokecubes.PokecubeManager;
 import pokecube.core.utils.Tools;
+import pokecube.pokeplayer.EventHandler;
 import pokecube.pokeplayer.PokeInfo;
 import pokecube.pokeplayer.Pokeplayer;
 import pokecube.pokeplayer.Reference;
@@ -58,6 +60,8 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     boolean edit     = false;
     
     int     stepTick = Pokeplayer.config.ticksBlockUse;
+    
+    float   originalHP = 20;
 
     public TileEntityTransformer(final BlockEntityType<?> tileEntityType, final BlockPos pos, final BlockState state)
     {
@@ -81,11 +85,9 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         }
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         if (nbt.contains("nums")) this.nums = nbt.getIntArray("nums");
-        //
         if (nbt.contains("lvl")) this.lvl = nbt.getInt("lvl");
         this.random = nbt.getBoolean("random");
         this.pubby = nbt.getBoolean("public");
-        //
         this.stepTick = nbt.getInt("stepTick");
         ContainerHelper.loadAllItems(nbt, this.items);
     }
@@ -102,12 +104,9 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         }
         if (this.nums != null) compound.putIntArray("nums", this.nums);
         compound.putInt("stepTick", this.stepTick);
-        
-        //
         compound.putInt("lvl", this.lvl);
         compound.putBoolean("random", this.random);
         compound.putBoolean("public", this.pubby);
-        //
         super.saveAdditional(compound);
     }
 
@@ -178,7 +177,6 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
                 itemStack);
         this.items.set(index, stack);
         if (stack.getCount() > this.getContainerSize()) stack.setCount(this.getContainerSize());
-
         if (!flag) this.setChanged();
     }
     
@@ -202,11 +200,11 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
     	super.setRemoved();
     	this.items.clear();
     }
-
+    
     @Override
     public CompoundTag getUpdateTag()
     {
-		return this.saveWithoutMetadata();
+    	return this.saveWithFullMetadata();
     }
 
 	@Override
@@ -229,7 +227,7 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
         final PokeInfo info = PlayerDataHandler.getInstance().getPlayerData(player).getData(PokeInfo.class);
         final boolean isPokemob = info.getPokemob(this.level) != null;
 
-        final boolean hasPokemob = !this.getItems().get(0).isEmpty();
+        final boolean hasPokemob = this.random || !this.getItems().get(0).isEmpty();
         if (hasPokemob && !isPokemob)
         {        	
             final IPokemob pokemob = this.getPokemob();
@@ -245,6 +243,7 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
                 // Morph Visual Player
                 copy.setCopiedID(pokedexEntry.getEntityType().getRegistryName());
                 CapabilitySync.sendUpdate(player);
+                EventHandler.sendUpdate(player);
                 // Guard Item inside Player
                 this.items.set(0, ItemStack.EMPTY);
 	        }
@@ -255,13 +254,9 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             }
             Pokeplayer.LOGGER.info("Converting {} to {}", player.getDisplayName().getString(), pokemob
                     .getPokedexEntry().getName());
-            
-            //
             final ServerLevel worldIn = (ServerLevel) player.level;
             for (final Player player2 : worldIn.players())
-             PacketTransform.sendPacket(player, (ServerPlayer) player2);
-            //
-            
+            	PacketTransform.sendPacket(player, (ServerPlayer) player2);
             return;
         }
         if (!hasPokemob && isPokemob)
@@ -270,19 +265,11 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             final CompoundTag tag = poke.getEntity().serializeNBT();
             final ICopyMob copy = CopyCaps.get(player);
             
-            //
-            poke.setPokemonNickname(tag.getString("oldName"));
-            //
-            
+            poke.setPokemonNickname(tag.getString("oldName"));     
             Pokeplayer.LOGGER.info("Converting {} back to a human", player.getDisplayName().getString());
-//            tag.putBoolean("is_a_player", true);
-            //
             tag.remove("oldName");
             tag.remove("playerID");
-            //
-            
-            info.detach();
-            
+            info.detach();  
             final ItemStack pokemob = PokecubeManager.pokemobToItem(poke);
             if (player.getAbilities().mayfly && !player.isCreative())
             {
@@ -294,25 +281,22 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             //Reset Morph
             copy.setCopiedID(null);
             player.removeEffect(MobEffects.WATER_BREATHING);
+            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(originalHP);
             //Back item for block inventory
             this.items.set(0, pokemob);
-            CapabilitySync.sendUpdate(player);
             
-            //
+            CapabilitySync.sendUpdate(player);
+            EventHandler.sendUpdate(player);
             final ServerLevel worldIn = (ServerLevel) player.level;
             for (final Player player2 : worldIn.players())
             	PacketTransform.sendPacket(player, (ServerPlayer) player2);
-            //
-            
             return;
         }
         Pokeplayer.LOGGER.info("Nothing happened to {}", player.getDisplayName().getString());
     }
 
-	@SuppressWarnings("resource")
 	private IPokemob getPokemob()
     {
-		//
 		if (this.random)
         {
             int num = 0;
@@ -320,7 +304,7 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             else
             {
                 final List<Integer> numbers = Lists.newArrayList(Database.data.keySet());
-                num = numbers.get(this.getLevel().random.nextInt(numbers.size()));
+                num = numbers.get(this.level.random.nextInt(numbers.size()));
             }
             final Entity entity = PokecubeCore.createPokemob(Database.getEntry(num), this.getLevel());
             final IPokemob pokemob = CapabilityPokemob.getPokemobFor(entity);
@@ -331,7 +315,6 @@ public class TileEntityTransformer extends RandomizableContainerBlockEntity
             }
             return pokemob;
         }
-		//
         final IPokemob pokemob = PokecubeManager.itemToPokemob(this.items.get(0), this.getLevel());
         return pokemob;
     }

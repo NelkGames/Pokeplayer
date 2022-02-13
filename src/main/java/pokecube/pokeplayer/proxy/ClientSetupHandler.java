@@ -12,7 +12,7 @@ import pokecube.core.interfaces.pokemob.IHasCommands.Command;
 import pokecube.core.network.EntityProvider;
 import pokecube.core.network.pokemobs.PacketCommand;
 import pokecube.pokeplayer.Reference;
-import pokecube.pokeplayer.client.gui.GUIAsPokeplayer;
+import pokecube.pokeplayer.client.gui.GuiAsPokemob;
 import pokecube.pokeplayer.client.gui.TransformBlockScreen;
 import pokecube.pokeplayer.init.ContainerInit;
 import pokecube.pokeplayer.network.EntityProviderPokeplayer;
@@ -27,13 +27,13 @@ public class ClientSetupHandler
 	@SubscribeEvent
     public static void setupClient(final FMLClientSetupEvent event)
     {
+		PokecubeCore.packets.registerMessage(PacketTransform.class, PacketTransform::new);
+		
 		MenuScreens.register(ContainerInit.TRANSFORM_CONTAINER.get(), TransformBlockScreen::new);
 		
+		GuiDisplayPokecubeInfo.instance = new GuiAsPokemob();
 		PokecubeCore.provider = new EntityProviderPokeplayer((EntityProvider) PokecubeCore.provider);
 		
-		//
-		GuiDisplayPokecubeInfo.instance = new GUIAsPokeplayer();
-		PokecubeCore.packets.registerMessage(PacketTransform.class, PacketTransform::new);
 		PacketCommand.init();
 		IHasCommands.COMMANDHANDLERS.put(Command.ATTACKENTITY, AttackEntity.class);
 		IHasCommands.COMMANDHANDLERS.put(Command.ATTACKLOCATION, AttackLocation.class);

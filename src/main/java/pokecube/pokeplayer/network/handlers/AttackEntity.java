@@ -21,13 +21,12 @@ import thut.api.maths.Vector3;
 // Wrapper to ensure player attacks entity as pokeplayer
 public class AttackEntity extends AttackEntityHandler 
 {	
-    @Override
+	@Override
     public void handleCommand(final IPokemob pokemob)
     {
         // Use default handling, which just agros stuff.
         if (!pokemob.getEntity().getPersistentData().getBoolean("is_a_player"))
         {
-        	PokecubeCore.LOGGER.debug("Talvez");
             super.handleCommand(pokemob);
             return;
         }
@@ -40,7 +39,7 @@ public class AttackEntity extends AttackEntityHandler
         final int currentMove = pokemob.getMoveIndex();
         final CommandAttackEvent event = new CommandAttackEvent(pokemob.getEntity(), target);
         MinecraftForge.EVENT_BUS.post(event);
-        PokecubeCore.LOGGER.debug("Event: " + event.isCanceled() + " Move: " + currentMove + " Poke: " + MovesUtils.canUseMove(pokemob));
+        Pokeplayer.LOGGER.debug("Event: " + event.isCanceled() + " Move: " + currentMove + " Poke: " + MovesUtils.canUseMove(pokemob));
         if (currentMove != 5)
         {
             final Move_Base move = MovesUtils.getMoveFromName(pokemob.getMoves()[currentMove]);
@@ -52,14 +51,11 @@ public class AttackEntity extends AttackEntityHandler
             else
             {
                 pokemob.getEntity().setTarget((LivingEntity) target);
-                if (target instanceof Mob) {
-                	BrainUtils.initiateCombat((Mob) target, (LivingEntity) real);
-                }
+                if (target instanceof Mob) BrainUtils.initiateCombat((Mob) target, (LivingEntity) real);
                 
                 final IPokemob targ = CapabilityPokemob.getPokemobFor(target);
-                if (targ != null) {
-                	targ.setCombatState(CombatStates.ANGRY, true);
-                }
+                if (targ != null) targ.setCombatState(CombatStates.ANGRY, true);
+                
                 // Checks if within range
                 final float dist = target.distanceTo(pokemob.getEntity());
                 double range = (move.getAttackCategory() & IMoveConstants.CATEGORY_DISTANCE) > 0 ? PokecubeCore
@@ -67,8 +63,7 @@ public class AttackEntity extends AttackEntityHandler
                 range = Math.max(pokemob.getMobSizes().x, range);
                 range = Math.max(1, range);
                 if (dist < range) {
-                	Pokeplayer.LOGGER.info("Attack-Entity");
-                	pokemob.executeMove(target, Vector3.empty.set(target), dist);
+                	pokemob.executeMove(target, Vector3.vecMult.set(target), dist);
                 }
             }
         }
