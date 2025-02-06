@@ -1,9 +1,6 @@
 {
-    "_comment": "Pokecube Pokeplayer translation",
+    "_comment1": "Pokecube Pokeplayer",
 
-	"_comment": "/Blocks",
-	"block.pokecube_pokeplayer.pokeplayer_transform": "Pokeplayer Transform",
-	
-	"_comment": "/HUD",
-	"container.pokecube_pokeplayer.transform":"Pokeplayer Transform"
+    "item.pokecube_pokeplayer.pokeplayer_machine": "Pokécube Syncro Machine",
+    "pokecube_pokeplayer.pokeplayer_machine.tooltip": "§aUtilize seu Pokémob para ganhar sua forma e habilidades."
 }

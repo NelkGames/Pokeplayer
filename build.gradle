@@ -9,7 +9,7 @@ buildscript {
         maven {url='https://repo.spongepowered.org/repository/maven-public/'}
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.+', changing: true
         classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
     }
 }
@@ -22,9 +22,6 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'org.spongepowered.mixin'
-
-eclipseJdtApt.enabled = false
-eclipseFactoryPath.enabled = false
 
 ext {
     VERSION_COMPILE = "${version_compile}"
@@ -89,8 +86,8 @@ repositories {
 dependencies {
     minecraft "net.minecraftforge:forge:${version_minecraft}-${version_forge}"
 
-    // Here we import the version of pokecube to use. Note that the curseforge page is 'aoi' rather than 'aio'
-    implementation fg.deobf("curse.maven:pokecube-aoi-${version_pokecube}")
+    // Here we import the version of pokecube to use.
+    implementation fg.deobf("curse.maven:pokecube-aio-${version_pokecube}")
 }
 
 // Example for how to get properties into the manifest for reading by the runtime..

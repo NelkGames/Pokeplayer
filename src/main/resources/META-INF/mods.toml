@@ -6,10 +6,10 @@ license="All rights reserved"
 [[mods]]
     modId="pokecube_pokeplayer"
     version="${file.jarVersion}"
-    displayName="Pokécube Mystery Dungeon Addon"
-    authors="NelkGames, Thutmose"
+    displayName="Pokécube Syncro Machine"
+    authors="Nelk, Thutmose"
     description='''
-    Pokecube Addon introduction Mystery Dungeon System
+    Example of an addon development environment for pokecube
     '''
     
 [[dependencies.pokecube_pokeplayer]]
