@@ -9,12 +9,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 
 import javax.annotation.Nonnull;
@@ -25,7 +25,7 @@ public class MachineInventoryCapability implements ICapabilitySerializable<Compo
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onItemDropped(ItemTossEvent event) {
-        if (event.getEntityItem().getItem().getItem() == RegisterInit.POKEPLAYER_MACHINE.get()) {
+        if (event.getEntity().getItem().getItem() == RegisterInit.POKEPLAYER_MACHINE.get()) {
             if (Minecraft.getInstance().screen instanceof MachineScreen) {
                 Minecraft.getInstance().player.closeContainer();
             }
@@ -36,7 +36,7 @@ public class MachineInventoryCapability implements ICapabilitySerializable<Compo
 
     @Override
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction side) {
-        return capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY ? this.inventory.cast() : LazyOptional.empty();
+        return capability == ForgeCapabilities.ITEM_HANDLER ? this.inventory.cast() : LazyOptional.empty();
     }
 
     @Override

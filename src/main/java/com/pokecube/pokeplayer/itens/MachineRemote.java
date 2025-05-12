@@ -13,8 +13,8 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -25,9 +25,8 @@ public class MachineRemote extends Item
     String tooltip_id;
 
     // Info
-    public MachineRemote(final String tooltipName, final CreativeModeTab tab, final int maxStackSize)
-    {
-        super(new Properties().tab(tab).stacksTo(maxStackSize));
+    public MachineRemote(final String tooltipName, final int maxStackSize) {
+        super(new Properties().stacksTo(maxStackSize));
         this.tooltip_id = tooltipName;
     }
 
@@ -40,7 +39,7 @@ public class MachineRemote extends Item
             extraData.writeBlockPos(entity.blockPosition());
             extraData.writeByte(hand == InteractionHand.MAIN_HAND ? 0 : 1);
 
-            NetworkHooks.openGui(sPlayer, new MachineInventoryProvider(extraData), buf -> {
+            NetworkHooks.openScreen(sPlayer, new MachineInventoryProvider(extraData), buf -> {
                 buf.writeBlockPos(entity.blockPosition());
                 buf.writeByte(hand == InteractionHand.MAIN_HAND ? 0 : 1);
             });
@@ -57,7 +56,7 @@ public class MachineRemote extends Item
     public CompoundTag getShareTag(ItemStack stack){
         CompoundTag nbt = super.getShareTag(stack);
         if(nbt != null)
-            stack.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null).ifPresent(capability ->
+            stack.getCapability(ForgeCapabilities.ITEM_HANDLER, null).ifPresent(capability ->
                     nbt.put("Inventory", ((ItemStackHandler) capability).serializeNBT()));
         return nbt;
     }
@@ -66,7 +65,7 @@ public class MachineRemote extends Item
     public void readShareTag(ItemStack stack, @Nullable CompoundTag nbt){
         super.readShareTag(stack, nbt);
         if(nbt != null)
-            stack.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null).ifPresent(capability ->
+            stack.getCapability(ForgeCapabilities.ITEM_HANDLER, null).ifPresent(capability ->
                     ((ItemStackHandler) capability).deserializeNBT((CompoundTag) nbt.get("Inventory")));
     }
 }

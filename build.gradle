@@ -1,27 +1,29 @@
-buildscript {
-    repositories {
-        maven { url = 'https://files.minecraftforge.net/maven' }
-        jcenter()
-        mavenCentral()
-        flatDir {
-          dirs 'libs'
-        }
-        maven {url='https://repo.spongepowered.org/repository/maven-public/'}
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.+', changing: true
-        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
-    }
-}
-
 plugins {
-  id 'org.ajoberstar.grgit' version '2.3.0'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.gradle' version '[6.0.18,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+    id 'org.ajoberstar.grgit' version '2.3.0'
 }
 
-apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'eclipse'
-apply plugin: 'maven-publish'
-apply plugin: 'org.spongepowered.mixin'
+repositories {
+    maven {
+        url "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    maven { url "https://maven.neoforged.net/releases" }
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    mavenCentral()
+    jcenter()
+    flatDir {
+        dir 'libs'
+    }
+}
+
+mixin {	add sourceSets.main, "thutessentials.refmap.json" }
 
 ext {
     VERSION_COMPILE = "${version_compile}"
@@ -71,39 +73,12 @@ minecraft {
     }
 }
 
-repositories {
-    maven {
-        url "https://cursemaven.com"
-        content {
-            includeGroup "curse.maven"
-        }
-    }
-    flatDir {
-        dirs 'libs'
-    }
-}
-
 dependencies {
-    minecraft "net.minecraftforge:forge:${version_minecraft}-${version_forge}"
+    minecraft "net.neoforged:forge:${version_minecraft}-${version_neoforged}"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // Here we import the version of pokecube to use.
     implementation fg.deobf("curse.maven:pokecube-aio-${version_pokecube}")
-}
-
-// Example for how to get properties into the manifest for reading by the runtime..
-jar {
-    manifest {
-        attributes([
-            "FMLAT": "accesstransformer.cfg",
-            "Specification-Title": "${compile_name}",
-            "Specification-Vendor": "${author_name}",
-            "Specification-Version": VERSION_COMPILE,
-            "Implementation-Title": project.name,
-            "Implementation-Version": VERSION_COMPILE,
-            "Implementation-Vendor" :"${author_name}",
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
-    }
 }
 
 processResources.doLast {
@@ -114,6 +89,20 @@ processResources.doLast {
 
 def replaceParameters(filename, find, replace) {
     ant.replace(file:filename,token:find,value:replace)
+}
+
+// Example for how to get properties into the manifest for reading by the runtime..
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes 'FMLAT': 'accesstransformer.cfg',
+        "Specification-Title": "${compile_name}",
+        "Specification-Vendor": "${author_name}",
+        "Specification-Version": VERSION_COMPILE,
+        "Implementation-Title": project.name,
+        "Implementation-Version": VERSION_COMPILE,
+        "Implementation-Vendor" :"${author_name}",
+        "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+    }
 }
 
 def cleanTOML()

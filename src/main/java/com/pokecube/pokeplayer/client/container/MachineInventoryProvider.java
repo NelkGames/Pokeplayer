@@ -2,7 +2,6 @@ package com.pokecube.pokeplayer.client.container;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -19,8 +18,9 @@ public class MachineInventoryProvider implements MenuProvider
 
     @Override
     public @NotNull Component getDisplayName() {
-        return new TextComponent("PokePlayer Transform");
+        return Component.literal("PokePlayer Transform");
     }
+
 
     @Override
     public AbstractContainerMenu createMenu(int id, @NotNull Inventory inventory, @NotNull Player player){

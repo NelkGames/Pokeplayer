@@ -14,7 +14,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
@@ -55,7 +55,7 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
                     itemStack = this.entity.getMainHandItem();
                 else
                     itemStack = this.entity.getOffhandItem();
-                itemStack.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null).ifPresent(cap -> {
+                itemStack.getCapability(ForgeCapabilities.ITEM_HANDLER, null).ifPresent(cap -> {
                     this.internal = cap;
                     this.bound = true;
                 });
@@ -63,14 +63,14 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
                 extraData.readByte();
                 Entity entity = world.getEntity(extraData.readVarInt());
                 if (entity != null)
-                    entity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null).ifPresent(cap -> {
+                    entity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).ifPresent(cap -> {
                         this.internal = cap;
                         this.bound = true;
                     });
             } else {
                 BlockEntity ent = inv.player != null ? inv.player.level.getBlockEntity(pos) : null;
                 if (ent != null) {
-                    ent.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null).ifPresent(cap -> {
+                    ent.getCapability(ForgeCapabilities.ITEM_HANDLER, null).ifPresent(cap -> {
                         this.internal = cap;
                         this.bound = true;
                     });
