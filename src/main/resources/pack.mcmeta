@@ -1,7 +1,6 @@
 {
-    "pack": {
-        "description": "Pokeplayer",
-        "pack_format": 6,
-        "_comment": "A pack_format of 6 requires json lang files and some texture changes from 1.20.1. Note: we require v6 pack meta for all mods."
-    }
+  "pack": {
+    "pack_format": 48,
+    "description": ""
+  }
 }

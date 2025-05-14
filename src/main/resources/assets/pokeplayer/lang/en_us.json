@@ -1,0 +1,7 @@
+{
+  "item.pokeplayer.pokeplayer_machine": "Synchro Machine",
+  "pokeplayer.pokeplayer_machine.tooltip": "A machine that synchronizes Pokémon with the PokéPlayer.",
+
+  "gui.pokeplayer.machine_gui.tooltip_slot": "Put Pokémon here to synchronize.",
+  "gui.pokeplayer.machine_gui.title": "Synchro Machine"
+}

@@ -1,79 +1,42 @@
 package com.pokecube.pokeplayer.data;
 
-import com.pokecube.pokeplayer.client.container.MachineSlotMenu;
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import com.pokecube.pokeplayer.world.inventory.MachineSlotMenu;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import pokecube.api.data.PokedexEntry;
 import pokecube.api.entity.pokemob.IPokemob;
+import pokecube.api.entity.pokemob.PokemobCaps;
+import pokecube.api.events.pokemobs.EvolveEvent;
 import pokecube.core.database.Database;
+import pokecube.core.items.ItemPokedex;
 import thut.api.ThutCaps;
+import thut.api.attachments.TrackedAttachment;
 import thut.api.entity.ICopyMob;
+import thut.lib.RegHelper;
 
-import java.util.List;
+public class PokeplayerDataHandler {
+    public static final PokeplayerDataHandler INSTANCE = new PokeplayerDataHandler();
 
-public class PokePlayerDataHandler
-{
-    private static final PokePlayerDataHandler INSTANCE = new PokePlayerDataHandler();
-
-    public static PokePlayerDataHandler getInstance() { return INSTANCE; }
-
-//    public IPokemob getPokemobForPlayer(Player player){
-//        ICopyMob copy = ThutCaps.getCopyMob(player);
-//        if(copy != null){
-//            return PokemobCaps.getPokemobFor(copy.getCopiedMob());
-//        }
-//        return null;
-//    }
+    public static PokeplayerDataHandler getInstance() { return INSTANCE; }
 
     public void transformToPokemob(Player player, IPokemob pokemob) {
         ICopyMob copy = ThutCaps.getCopyMob(player);
         PokedexEntry poke = Database.getEntry(pokemob);
-        ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(poke.getEntityType());
-        if(copy != null){
-            if(id != null)  copy.setCopiedID(id);
-
-            if (player instanceof ServerPlayer serverplayer) {
-                List<SynchedEntityData.DataValue<?>> dataValues = player.getEntityData().getNonDefaultValues();
-                if (dataValues != null) {
-                    ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(player.getId(), dataValues);
-                    serverplayer.connection.send(packet);
-                }
-            //if (player instanceof ServerPlayer serverplayer) {
-            //    serverplayer.connection.send(new ClientboundSetEntityDataPacket(player.getId(), player.getEntityData(), true));
-            }
-
-            String[] moves = pokemob.getMoves();
-            if(moves != null){
-                for (int i = 0; i < moves.length; i++){
-                    if(moves[i] != null) {
-                        MachineSlotMenu.guistate.put("move_" + i, moves[i]);
-                    }
-                }
-            }
+        if (copy != null) {
+            copy.setCopiedID(RegHelper.getKey(poke.getEntityType()));
         }
     }
 
     public void revertToPlayer(Player player) {
         ICopyMob copyMob = ThutCaps.getCopyMob(player);
-        player.getPersistentData().remove("PokePlayerForm");
-        if(copyMob != null){
+        if (copyMob != null) {
             copyMob.setCopiedID(null);
-            if (player instanceof ServerPlayer serverplayer) {
-                List<SynchedEntityData.DataValue<?>> dataValues = player.getEntityData().getNonDefaultValues();
-                if (dataValues != null) {
-                    ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(player.getId(), dataValues);
-                    serverplayer.connection.send(packet);
-                }
-            }
-            if(player.isCreative()) {
+
+            if (player.isCreative()) {
                 player.getAbilities().mayfly = true;
                 player.getAbilities().instabuild = true;
-            } else{
+            } else {
                 player.getAbilities().mayfly = false;
                 player.getAbilities().instabuild = false;
             }
@@ -84,9 +47,49 @@ public class PokePlayerDataHandler
 
             MachineSlotMenu.guistate.clear();
         }
-        player.refreshDimensions();
-        player.setPos(player.getX(), player.getY(), player.getZ());
-        player.level.getProfiler().push("reposition");
-        player.level.getProfiler().pop();
+    }
+
+    public static void onRightClickItem(PlayerInteractEvent.RightClickItem evt)
+    {
+        // Try using it on self if it is a usable item or a pokedex
+        final ICopyMob copy = ThutCaps.getCopyMob(evt.getEntity());
+        if (copy != null && copy.getCopiedMob() != null)
+        {
+            var stack = evt.getItemStack();
+            if (stack.getItem() instanceof ItemPokedex && evt.getEntity().isShiftKeyDown())
+            {
+                stack.interactLivingEntity(evt.getEntity(), copy.getCopiedMob(), evt.getHand());
+                evt.setCanceled(true);
+                return;
+            }
+            var usable = PokemobCaps.getPokemobUsable(stack);
+            var pokemob = PokemobCaps.getPokemobFor(copy.getCopiedMob());
+            if (usable != null && pokemob != null)
+            {
+                var res = usable.onUse(pokemob, stack, evt.getEntity());
+                if (res.getResult().indicateItemUse())
+                {
+                    evt.setCancellationResult(res.getResult());
+                    evt.setCanceled(true);
+                }
+            }
+            if (copy instanceof TrackedAttachment tracked) tracked.markDirty();
+        }
+    }
+
+    public static void onEvolve(EvolveEvent.Post event)
+    {
+        var entity = event.mob.getEntity();
+        if (entity.getPersistentData().hasUUID("copy_parent"))
+        {
+            var id = entity.getPersistentData().getUUID("copy_parent");
+            var player = entity.level().getPlayerByUUID(id);
+            var copy = ThutCaps.getCopyMob(player);
+            if (copy != null)
+            {
+                copy.setCopiedMob(entity);
+                event.setCanceled(true);
+            }
+        }
     }
 }
