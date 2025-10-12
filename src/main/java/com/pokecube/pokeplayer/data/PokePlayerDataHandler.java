@@ -1,8 +1,10 @@
 package com.pokecube.pokeplayer.data;
 
-import com.pokecube.pokeplayer.world.inventory.MachineSlotMenu;
+import com.pokecube.pokeplayer.client.PokeplayerClient;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import pokecube.api.data.PokedexEntry;
 import pokecube.api.entity.pokemob.IPokemob;
@@ -19,35 +21,6 @@ public class PokeplayerDataHandler {
     public static final PokeplayerDataHandler INSTANCE = new PokeplayerDataHandler();
 
     public static PokeplayerDataHandler getInstance() { return INSTANCE; }
-
-    public void transformToPokemob(Player player, IPokemob pokemob) {
-        ICopyMob copy = ThutCaps.getCopyMob(player);
-        PokedexEntry poke = Database.getEntry(pokemob);
-        if (copy != null) {
-            copy.setCopiedID(RegHelper.getKey(poke.getEntityType()));
-        }
-    }
-
-    public void revertToPlayer(Player player) {
-        ICopyMob copyMob = ThutCaps.getCopyMob(player);
-        if (copyMob != null) {
-            copyMob.setCopiedID(null);
-
-            if (player.isCreative()) {
-                player.getAbilities().mayfly = true;
-                player.getAbilities().instabuild = true;
-            } else {
-                player.getAbilities().mayfly = false;
-                player.getAbilities().instabuild = false;
-            }
-            player.onUpdateAbilities();
-
-            player.setPose(Pose.STANDING);
-            player.refreshDimensions();
-
-            MachineSlotMenu.guistate.clear();
-        }
-    }
 
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem evt)
     {
@@ -91,5 +64,12 @@ public class PokeplayerDataHandler {
                 event.setCanceled(true);
             }
         }
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public static void onTransform(int level, String[] moves)
+    {
+        PokeplayerClient.currentLevel = level;
+        PokeplayerClient.currentMoves = moves;
     }
 }

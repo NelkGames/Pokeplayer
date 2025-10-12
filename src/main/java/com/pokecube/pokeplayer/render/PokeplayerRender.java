@@ -25,7 +25,7 @@ import thut.api.maths.Vector3;
 import thut.wearables.inventory.PlayerWearables;
 
 public class PokeplayerRender {
-    @SuppressWarnings("deprecation")
+
     private static final ResourceLocation STEP = ResourceLocation.parse("pokeplayer:step_adjust");
 
     public static void onPlayerTick(final PlayerTickEvent.Pre event)

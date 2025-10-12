@@ -1,12 +1,11 @@
 package com.pokecube.pokeplayer.world.inventory;
 
-import com.pokecube.pokeplayer.data.PokeplayerDataHandler;
+import com.pokecube.pokeplayer.data.PokeInfo;
 import com.pokecube.pokeplayer.init.GuiInit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -22,7 +21,7 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 import net.neoforged.neoforge.items.wrapper.InvWrapper;
-import pokecube.api.entity.pokemob.IPokemob;
+import org.jetbrains.annotations.NotNull;
 import pokecube.core.items.pokecubes.PokecubeManager;
 
 import java.util.HashMap;
@@ -92,10 +91,9 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
             public void setChanged() {
                 ItemStack stack = this.getItem();
                 if (!stack.isEmpty() && PokecubeManager.isFilled(stack)) {
-                    System.out.println("Item detectado e não está vazio. Verificando se é um Pokemob...");
-                    TransformMob(stack);
+                    PokeInfo.POKE_INFO.TransformMob(stack, entity, world);
                 } else {
-                    RevertMob();
+                    PokeInfo.POKE_INFO.RevertMob(entity);
                 }
             }
         }));
@@ -106,26 +104,8 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
             this.addSlot(new Slot(inv, si, 0 + 8 + si * 18, 0 + 142));
     }
 
-    private void TransformMob(ItemStack pokecube) {
-        if (PokecubeManager.isFilled(pokecube)) {
-            IPokemob pokemob = PokecubeManager.itemToPokemob(pokecube, this.world);
-            if (pokemob != null) {
-                System.out.println("Pokemob encontrado: " + pokemob.getPokedexEntry().getName());
-                PokeplayerDataHandler.getInstance().transformToPokemob(this.entity, pokemob);
-            }
-        }
-    }
-
-    private void RevertMob() {
-        PokeplayerDataHandler.getInstance().revertToPlayer(this.entity);
-
-        this.entity.setHealth(this.entity.getMaxHealth());
-        this.entity.getAttributes().getInstance(Attributes.MAX_HEALTH).setBaseValue(20.0D);
-        this.entity.refreshDimensions();
-    }
-
     @Override
-    public boolean stillValid(Player player) {
+    public boolean stillValid(@NotNull Player player) {
         if (this.bound) {
             if (this.boundItemMatcher != null)
                 return this.boundItemMatcher.get();
@@ -138,10 +118,10 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
     }
 
     @Override
-    public ItemStack quickMoveStack(Player playerIn, int index) {
+    public @NotNull ItemStack quickMoveStack(@NotNull Player playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
         Slot slot = (Slot) this.slots.get(index);
-        if (slot != null && slot.hasItem()) {
+        if (slot.hasItem()) {
             ItemStack itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
             if (index < 1) {
@@ -170,7 +150,7 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
     }
 
     @Override
-    protected boolean moveItemStackTo(ItemStack stack, int index, int count, boolean move) {
+    protected boolean moveItemStackTo(@NotNull ItemStack stack, int index, int count, boolean move) {
         boolean flag = false;
         int i = index;
         if (move) {
@@ -229,7 +209,7 @@ public class MachineSlotMenu extends AbstractContainerMenu implements Supplier<M
     }
 
     @Override
-    public void removed(Player playerIn) {
+    public void removed(@NotNull Player playerIn) {
         super.removed(playerIn);
         if (!bound && playerIn instanceof ServerPlayer serverPlayer) {
             if (!serverPlayer.isAlive() || serverPlayer.hasDisconnected()) {
